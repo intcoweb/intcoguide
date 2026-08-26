@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>桂院校园导航</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ======================= 地图 Tab ======================= -->
+    <section class="page page-map" id="page-map">
+      <div class="map-top-card">
+        <div class="map-top-left">
+          <div class="map-field up">
+            <span class="dot start"></span>
+            <input class="map-input" id="mapStartInput" placeholder="当前地点/起点" readonly />
+          </div>
+          <div class="map-field">
+            <span class="dot end"></span>
+            <input class="map-input" id="mapEndInput" placeholder="请选择终点" readonly />
+          </div>
+        </div>
+        <div class="map-top-middle">
+          <button class="map-exchange" id="mapExchangeBtn" title="对调起点/终点">
+            <img src="https://lbs.gtimg.com/visual/miniprogram-plugin/route-planning/assets/exchange.png" alt="交换" />
+          </button>
+        </div>
+        <div class="map-top-right">
+          <button class="map-route-btn" id="mapRouteBtn">路线</button>
+        </div>
+      </div>
+
+      <!-- 校区切换 + 分类栏（无路线时） -->
+      <div class="map-control" id="mapControl">
+        <div class="map-campus-wrap" id="mapCampusWrap">
+          <button class="picker" id="mapCampusBtn"></button>
+        </div>
+        <div class="map-categories" id="mapCategories"></div>
+      </div>
+
+      <!-- 出行方式（有路线时） -->
+      <div class="map-modes" id="mapModes">
+        <div class="mode" data-mode="walking">步行</div>
+        <div class="mode" data-mode="bicycling">骑行</div>
+        <div class="mode" data-mode="driving">驾车</div>
+      </div>
+
+      <!-- 地图容器 -->
+      <div id="leafletMap"></div>
+
+      <!-- 地图右侧按钮 -->
+      <div class="map-right-tools">
+        <div class="location" id="mapRestoreBtn" title="还原">
+          <img src="assets/images/restore.png" alt="还原" />
+        </div>
+        <div class="location" id="mapLocationBtn" title="定位">
+          <img src="assets/images/location.png" alt="定位" />
+        </div>
+        <button class="map-layer-toggle" id="mapLayerToggle" title="切换校园示意图/真实地图">示意图</button>
+      </div>
+
+      <!-- 底部按钮 -->
+      <div class="map-bottom" id="mapBottomBtn"></div>
+    </section>
+
+    <!-- ======================= 地点汇总 Tab ======================= -->
+    <section class="page page-site" id="page-site">
+      <div class="site-campus" id="siteCampusWrap">
+        <button class="picker" id="siteCampusBtn"></button>
+      </div>
+      <div class="site-body">
+        <div class="site-left" id="siteLeft"></div>
+        <div class="site-right">
+          <div class="site-title">
+            <img id="siteTitleIcon" src="assets/images/tag.png" alt="" />
+            <span id="siteTitleText"></span>
+          </div>
+          <div class="site-content" id="siteContent"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 首页 Tab ======================= -->
+    <section class="page page-home" id="page-home">
+      <div class="home-hero">
+        <div class="home-swiper" id="homeSwiper"></div>
+        <div class="home-hero-badge">
+          <img class="home-logo" id="homeLogo" src="" alt="校徽" />
+        </div>
+        <div class="home-hero-label" id="homeLabel"></div>
+        <div class="home-school-name" id="homeSchoolName"></div>
+      </div>
+
+      <div class="home-motto" id="homeMotto"></div>
+
+      <div class="home-info" id="homeInfo"></div>
+
+      <div class="home-banner" id="homeBanner"></div>
+
+      <div class="home-card">
+        <div class="home-card-title">🚩 常用功能</div>
+        <div class="home-functions" id="homeFunctions"></div>
+      </div>
+
+      <div class="home-banner" id="homeWeatherTitle"></div>
+
+      <div class="home-card">
+        <div class="weather-card" id="weatherCard"></div>
+      </div>
+
+      <div class="home-footer" id="homeFooter"></div>
+    </section>
+
+    <!-- ======================= 校园指南 Tab ======================= -->
+    <section class="page page-school" id="page-school">
+      <div class="school-list" id="schoolList"></div>
+    </section>
+
+    <!-- ======================= 更多 Tab ======================= -->
+    <section class="page page-more" id="page-more">
+      <div class="more-wrap">
+        <div class="more-profile">
+          <div class="more-profile-card">
+            <div class="more-avatar"><img src="assets/images/hat.png" alt="头像" /></div>
+            <div class="more-info">
+              <div class="more-name" id="moreName"></div>
+              <div class="more-welcome">欢迎使用校园导航小程序</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="more-menu" id="moreMenu"></div>
+
+        <div class="more-footer">桂院校园导航&ensp;|&ensp;版权归开发者所有</div>
+      </div>
+    </section>
+
+    <!-- ======================= 子页面（覆盖层） ======================= -->
+    <section class="subpage" id="page-search">
+      <div class="sub-nav">
+        <button class="back" data-back>‹</button>
+        <span class="sub-title">搜索地点</span>
+      </div>
+      <div class="search-root" id="searchRoot"></div>
+      <div class="search-history" id="searchHistory"></div>
+      <div class="search-result" id="searchResult"></div>
+    </section>
+
+    <section class="subpage" id="page-instruction">
+      <div class="sub-nav">
+        <button class="back" data-back>‹</button>
+        <span class="sub-title">使用说明</span>
+      </div>
+      <div class="instruction-body" id="instructionBody"></div>
+    </section>
+
+    <section class="subpage" id="page-introduction">
+      <div class="sub-nav">
+        <button class="back" data-back>‹</button>
+        <span class="sub-title">学校简介</span>
+      </div>
+      <div class="introduction-body" id="introductionBody"></div>
+    </section>
+
+    <section class="subpage" id="page-pano">
+      <div class="sub-nav">
+        <button class="back" data-back>‹</button>
+        <span class="sub-title">全景地图</span>
+      </div>
+      <div class="pano-body" id="panoBody"></div>
+    </section>
+
+    <section class="subpage" id="page-guidance">
+      <div class="sub-nav">
+        <button class="back" data-back>‹</button>
+        <span class="sub-title">校园指南</span>
+      </div>
+      <div class="guidance-body" id="guidanceBody"></div>
+    </section>
+
+    <section class="subpage" id="page-statement">
+      <div class="sub-nav">
+        <button class="back" data-back>‹</button>
+        <span class="sub-title">软件声明</span>
+      </div>
+      <div class="statement-body" id="statementBody"></div>
+    </section>
+
+    <!-- 底部 TabBar -->
+    <nav class="tabbar" id="tabbar">
+      <a class="tab-item" data-route="#/map">
+        <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="地图" /><span>地图</span>
+      </a>
+      <a class="tab-item" data-route="#/site">
+        <img class="tab-icon" src="assets/images/tabbar/icon_collection.png" data-alt="assets/images/tabbar/icon_collection_HL.png" alt="地点汇总" /><span>地点汇总</span>
+      </a>
+      <a class="tab-item" data-route="#/home">
+        <img class="tab-icon" src="assets/images/tabbar/icon_home.png" data-alt="assets/images/tabbar/icon_home_HL.png" alt="首页" /><span>首页</span>
+      </a>
+      <a class="tab-item" data-route="#/school">
+        <img class="tab-icon" src="assets/images/tabbar/icon_school.png" data-alt="assets/images/tabbar/icon_school_HL.png" alt="校园指南" /><span>校园指南</span>
+      </a>
+      <a class="tab-item" data-route="#/more">
+        <img class="tab-icon" src="assets/images/tabbar/icon_more.png" data-alt="assets/images/tabbar/icon_more_HL.png" alt="更多" /><span>更多</span>
+      </a>
+    </nav>
+
+    <!-- 弹窗 -->
+    <div class="modal-mask" id="modalMask">
+      <div class="modal" id="modalBox">
+        <div class="modal-header">
+          <span id="modalTitle"></span>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer" id="modalFooter"></div>
+      </div>
+    </div>
+
+    <!-- 轻提示 toast -->
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
