@@ -483,10 +483,12 @@
         const latitudeSpan = (b.north - b.south) * imageScale;
         const imageRatio = image.naturalWidth / image.naturalHeight;
         const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
-        const centerLongitude = (b.east + b.west) / 2;
+        const imageOffset = { latitude: 0.00022, longitude: 0.00022 };
+        const adjustedCenterLatitude = centerLatitude + imageOffset.latitude;
+        const centerLongitude = (b.east + b.west) / 2 + imageOffset.longitude;
         addOverlay([
-          [centerLatitude - latitudeSpan / 2, centerLongitude - longitudeSpan / 2],
-          [centerLatitude + latitudeSpan / 2, centerLongitude + longitudeSpan / 2],
+          [adjustedCenterLatitude - latitudeSpan / 2, centerLongitude - longitudeSpan / 2],
+          [adjustedCenterLatitude + latitudeSpan / 2, centerLongitude + longitudeSpan / 2],
         ]);
       };
       image.onerror = () => addOverlay([[b.south, b.west], [b.north, b.east]]);
