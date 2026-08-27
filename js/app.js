@@ -479,13 +479,14 @@
       };
       image.onload = () => {
         const centerLatitude = (b.north + b.south) / 2;
-        const latitudeSpan = b.north - b.south;
+        const imageScale = 0.5;
+        const latitudeSpan = (b.north - b.south) * imageScale;
         const imageRatio = image.naturalWidth / image.naturalHeight;
         const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
         const centerLongitude = (b.east + b.west) / 2;
         addOverlay([
-          [b.south, centerLongitude - longitudeSpan / 2],
-          [b.north, centerLongitude + longitudeSpan / 2],
+          [centerLatitude - latitudeSpan / 2, centerLongitude - longitudeSpan / 2],
+          [centerLatitude + latitudeSpan / 2, centerLongitude + longitudeSpan / 2],
         ]);
       };
       image.onerror = () => addOverlay([[b.south, b.west], [b.north, b.east]]);
