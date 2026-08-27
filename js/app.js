@@ -479,7 +479,7 @@
       };
       image.onload = () => {
         const centerLatitude = (b.north + b.south) / 2;
-        const imageScale = 0.6;
+        const imageScale = 0.55;
         const latitudeSpan = (b.north - b.south) * imageScale;
         const imageRatio = image.naturalWidth / image.naturalHeight;
         const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
