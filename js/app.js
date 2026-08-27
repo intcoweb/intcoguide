@@ -475,7 +475,17 @@
       const image = new Image();
       const addOverlay = (bounds) => {
         if (token !== overlayToken || !state.showMapImg) return;
-        groundOverlay = L.imageOverlay(campus.img, bounds, { opacity: b.opacity || 0.8 }).addTo(map);
+        const overlay = L.imageOverlay(campus.img, bounds, { opacity: b.opacity || 0.8 }).addTo(map);
+        const resetOverlay = overlay._reset.bind(overlay);
+        overlay._reset = function () {
+          resetOverlay();
+          const element = this.getElement();
+          if (!element) return;
+          element.style.transformOrigin = '100% 100%';
+          element.style.transform = element.style.transform.replace(/\s*rotate\([^)]*\)/g, '') + ' rotate(5deg)';
+        };
+        overlay._reset();
+        groundOverlay = overlay;
       };
       image.onload = () => {
         const centerLatitude = (b.north + b.south) / 2;
@@ -483,7 +493,7 @@
         const latitudeSpan = (b.north - b.south) * imageScale;
         const imageRatio = image.naturalWidth / image.naturalHeight;
         const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
-        const imageOffset = { latitude: 0.00022, longitude: 0.00048 };
+        const imageOffset = { latitude: 0.00022, longitude: 0.00038 };
         const adjustedCenterLatitude = centerLatitude + imageOffset.latitude;
         const centerLongitude = (b.east + b.west) / 2 + imageOffset.longitude;
         addOverlay([
