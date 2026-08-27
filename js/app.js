@@ -116,7 +116,7 @@
   /* =========================================================
      路由
      ========================================================= */
-  const TAB_ROUTES = ['map', 'site', 'home', 'school', 'more'];
+  const TAB_ROUTES = ['map', 'site', 'home'];
 
   function setActiveTab(tab) {
     state.tab = tab;
@@ -162,8 +162,6 @@
       if (name === 'map') onMapShow();
       if (name === 'site') onSiteShow();
       if (name === 'home') onHomeShow();
-      if (name === 'school') onSchoolShow();
-      if (name === 'more') onMoreShow();
     } else if (name === 'search') {
       state.searchTarget = Number(query.id) || 0;
       showSub('search');
@@ -177,12 +175,6 @@
     } else if (name === 'pano') {
       showSub('pano');
       renderPano();
-    } else if (name === 'guidance') {
-      showSub('guidance');
-      renderGuidance(query.id);
-    } else if (name === 'statement') {
-      showSub('statement');
-      renderStatement();
     } else {
       hideSub();
       setActiveTab('home');
@@ -211,25 +203,8 @@
   }
   function renderHome() {
     const si = SCHOOL.school_information;
-    $('#homeLogo').src = asset(MEDIA.school_logo);
-    $('#homeLabel').innerHTML = '<img src="' + asset(MEDIA.label) + '" alt="学校简介" />';
+    $('#homeLabel').textContent = '厂区简介';
     $('#homeSchoolName').textContent = si.school_name_full;
-
-    // 轮播
-    const sw = $('#homeSwiper');
-    sw.innerHTML = (MEDIA.swiper_background || []).map((url) =>
-      '<div class="slide"><img src="' + esc(url) + '" /></div>').join('');
-    sw.innerHTML += '<div class="home-swiper-dots">' + MEDIA.swiper_background.map((_, i) => '<i class="' + (i === 0 ? 'on' : '') + '"></i>').join('') + '</div>';
-    $$('.slide img', sw).forEach((img) => img.addEventListener('click', () => previewImage(img.src)));
-    let slideIdx = 0;
-    sw.addEventListener('scroll', () => {
-      const w = sw.clientWidth;
-      const idx = Math.round(sw.scrollLeft / w);
-      if (idx !== slideIdx && idx >= 0 && idx < MEDIA.swiper_background.length) {
-        slideIdx = idx;
-        $$('.home-swiper-dots i', sw).forEach((dot, i) => dot.classList.toggle('on', i === idx));
-      }
-    });
 
     // 校训 / 荣誉
     $('#homeMotto').innerHTML =
@@ -238,8 +213,8 @@
 
     // 信息
     $('#homeInfo').innerHTML =
-      '<div class="col"><div>建校时间：' + esc(si.build_time) + '年</div><div class="home-info-sub">办校类型：' + esc(si.school_type) + '院校</div></div>' +
-      '<div class="col"><div>院校类型：' + esc(si.institution_type) + '</div><div class="home-info-sub">所在地：' + esc(si.location) + '</div></div>';
+      '<div class="col"><div>成立时间：' + esc(si.build_time) + '年</div><div class="home-info-sub">企业类型：' + esc(si.school_type) + '企业</div></div>' +
+      '<div class="col"><div>业务领域：' + esc(si.institution_type) + '</div><div class="home-info-sub">地址：' + esc(si.location) + '</div></div>';
 
     // 欢迎条
     $('#homeBanner').innerHTML = '<img src="' + asset(MEDIA.laba) + '" alt="" /><span>欢迎使用' + esc(MINI_NAME) + '小程序</span>';
@@ -248,17 +223,12 @@
     const funcs = MEDIA.function_buttons;
     const funcConf = [
       { img: funcs[0], label: '地图导航', act: () => { location.hash = '#/map'; } },
-      { img: funcs[1], label: '校园指南', act: () => { location.hash = '#/school'; } },
-      { img: funcs[5], label: '全景地图', act: () => { location.hash = '#/pano'; } },
-      { img: funcs[3], label: '友情链接', act: openLinksDialog },
+      { img: funcs[2], label: '友情链接', act: openLinksDialog },
     ];
     $('#homeFunctions').innerHTML = funcConf.map((f) => '<button><img src="' + asset(f.img) + '" alt="' + esc(f.label) + '" /></button>').join('');
     $$('#homeFunctions button').forEach((btn, i) => btn.addEventListener('click', funcConf[i].act));
 
-    // 天气标题
-    $('#homeWeatherTitle').innerHTML = '<img src="' + asset(MEDIA.weather) + '" alt="" /><span style="color:#73a5d6;font-size:18px">校园天气</span>';
-
-    // 学校简介跳转
+    // 厂区简介跳转
     $('#homeLabel').addEventListener('click', () => { location.hash = '#/introduction'; });
 
     // 页脚
@@ -299,60 +269,29 @@
   function renderWeather(now) {
     const si = SCHOOL.school_information;
     const card = $('#weatherCard');
-    if (!now) {
-      card.innerHTML = '<div class="weather-city">' + esc(si.location) + '</div><div class="weather-tmp">--°</div><div class="weather-info"><span>天气暂不可用</span></div>';
-      return;
-    }
-    const icon = 'https://icons.qweather.com/assets/icons/' + now.icon + '.svg';
+    const hasWeather = Boolean(now);
+    const icon = hasWeather ? 'https://icons.qweather.com/assets/icons/' + now.icon + '.svg' : '';
+    const conditionIcon = hasWeather
+      ? '<img class="icon" src="' + esc(icon) + '" alt="' + esc(now.text) + '" />'
+      : '<div class="weather-empty-icon">—</div>';
+    const wind = hasWeather ? esc(now.windDir) + ' ' + esc(now.windScale) + '级' : '--';
+    const humidity = hasWeather ? esc(now.humidity) + '%' : '--';
+    const pressure = hasWeather ? esc(now.pressure) + ' hPa' : '--';
+    const feelsLike = hasWeather && now.feelsLike ? '体感 ' + esc(now.feelsLike) + '°C' : (hasWeather ? '实时观测' : '稍后自动重试');
     card.innerHTML =
-      '<div class="weather-city">' + esc(si.location) + '</div>' +
-      '<div class="weather-tmp"><span>' + esc(now.temp) + '°</span><img class="icon" src="' + esc(icon) + '" alt="' + esc(now.text) + '" /></div>' +
-      '<div class="weather-info"><span>' + esc(now.windDir) + ' ' + esc(now.windScale) + '级</span><span>湿度 ' + esc(now.humidity) + '%</span><span>气压 ' + esc(now.pressure) + 'Pa</span></div>' +
+      '<div class="weather-card-content">' +
+      '<div class="weather-location"><span class="weather-label">当前厂区</span><strong>' + esc(si.location) + '</strong></div>' +
+      '<div class="weather-summary">' +
+      '<div class="weather-temp"><span>' + (hasWeather ? esc(now.temp) : '--') + '</span><sup>°C</sup></div>' +
+      '<div class="weather-condition">' + conditionIcon + '<div class="weather-condition-copy"><strong>' + (hasWeather ? esc(now.text) : '天气暂不可用') + '</strong><span>' + feelsLike + '</span></div></div>' +
+      '</div>' +
+      '<div class="weather-info">' +
+      '<div class="weather-metric"><span>风力</span><strong>' + wind + '</strong></div>' +
+      '<div class="weather-metric"><span>湿度</span><strong>' + humidity + '</strong></div>' +
+      '<div class="weather-metric"><span>气压</span><strong>' + pressure + '</strong></div>' +
+      '</div>' +
+      '</div>' +
       '<img class="weather-wave" src="' + asset(MEDIA.wave) + '" alt="" />';
-  }
-
-  /* =========================================================
-     校园指南 Tab
-     ========================================================= */
-  let schoolRendered = false;
-  function onSchoolShow() {
-    if (schoolRendered) return;
-    schoolRendered = true;
-    renderSchool();
-  }
-  function renderSchool() {
-    $('#schoolList').innerHTML = SCHOOL.school_guide.map((g, i) =>
-      '<div class="school-item" data-i="' + i + '"><div class="left"><span>📖</span><span>' + esc(g.title) + '</span></div><img class="arrow" src="' + asset(MEDIA.green_arrow) + '" alt=">" /></div>').join('');
-    $$('#schoolList .school-item').forEach((el) => el.addEventListener('click', () => {
-      location.hash = '#/guidance?id=' + el.dataset.i;
-    }));
-  }
-
-  /* =========================================================
-     更多 Tab
-     ========================================================= */
-  let moreRendered = false;
-  function onMoreShow() {
-    if (moreRendered) return;
-    moreRendered = true;
-    renderMore();
-  }
-  function renderMore() {
-    $('#moreName').textContent = MINI_NAME;
-    const rows = [
-      { ic: asset(MEDIA.statement), label: '软件声明', act: () => { location.hash = '#/statement'; } },
-      { ic: asset(MEDIA.users), label: '联系作者', act: () => {
-        openModal('联系作者', '如果遇到什么问题<br/>请点击确认与我联系', [{ text: '取消' }, { text: '确认', primary: true, onClick: () => previewImage(MEDIA.contact) }]);
-      } },
-      { ic: asset(MEDIA.chat), label: '客服对话', act: () => toast('该服务需在微信小程序中打开', 2200) },
-      { ic: asset(MEDIA.feedback), label: '意见反馈', act: () => toast('该服务需在微信小程序中打开', 2200) },
-      { ic: asset(MEDIA.share), label: '推荐给好友', act: () => {
-        openModal('推荐给好友', '点击确认即可查看小程序码<br/>长按小程序码即可转发给好友', [{ text: '取消' }, { text: '确认', primary: true, onClick: () => previewImage(MEDIA.miniprogramming_ma) }]);
-      } },
-    ];
-    $('#moreMenu').innerHTML = rows.map((r) =>
-      '<div class="more-row"><img class="ic" src="' + r.ic + '" alt="" /><span>' + esc(r.label) + '</span><img class="arrow" src="' + asset(MEDIA.green_arrow) + '" alt=">" /></div>').join('');
-    $$('#moreMenu .more-row').forEach((row, i) => row.addEventListener('click', rows[i].act));
   }
 
   /* =========================================================
@@ -457,7 +396,7 @@
     state.mapDefaultPoint = defaultPointOf(MAP.site_data[state.choose]);
 
     map = L.map('leafletMap', { zoomControl: false, attributionControl: true });
-    map.setView([25.093668, 110.277685], 16);
+    map.setView([MAP.latitude, MAP.longitude], MAP.scale || 16);
 
     baseLayer = L.tileLayer('https://rt{s}.map.gtimg.com/tile?z={z}&x={x}&y={y}&type=vector&styleid=3', {
       tms: true,
@@ -505,8 +444,7 @@
     renderCampusOverlay();
     renderCategoryMarkers();
     if (map) {
-      if (state.choose === 1) map.setView([campus.latitude, campus.longitude], 17);
-      else map.setView([campus.latitude, campus.longitude], 16);
+      map.setView([campus.latitude, campus.longitude], MAP.scale || 16);
     }
   }
 
@@ -517,8 +455,7 @@
     $('#mapCategories').innerHTML = cats.map((c, i) =>
       '<div class="map-cat' + (i === state.mapCategory ? ' choose' : '') + '" data-i="' + i + '">' + esc(c.name) + '</div>').join('');
     $$('#mapCategories .map-cat').forEach((el) => el.addEventListener('click', () => changeCategory(Number(el.dataset.i))));
-    const cat = cats[state.mapCategory];
-    if (cat) $('#mapBottomBtn').textContent = '🏫 ' + cat.name + ' 有 ' + cat.list.length + ' 个地点';
+    $('#mapBottomBtn').classList.add('hidden');
     hideRouteUI();
   }
 
@@ -526,8 +463,7 @@
     const campus = currentCampus();
     if (groundOverlay) { map.removeLayer(groundOverlay); groundOverlay = null; }
     if (polygonLayer) { map.removeLayer(polygonLayer); polygonLayer = null; }
-    // 与原小程序一致：默认叠加手绘校园示意图（addGroundOverlay 的复刻）。
-    // 右上角“真实地图”可用于切换到真实底图 + 校区边界多边形，点位更精准。
+    // 默认叠加厂区示意图；右上角可切换真实底图和厂区边界。
     if (state.showMapImg && campus.isUseMapImg && campus.img && campus.bounds) {
       const b = campus.bounds;
       groundOverlay = L.imageOverlay(campus.img, [[b.south, b.west], [b.north, b.east]], { opacity: b.opacity || 0.8 }).addTo(map);
@@ -560,18 +496,15 @@
   }
 
   function formMarker(site, type, id) {
+    const label = type === 'location' ? '当前位置' : site.name;
     const icon = L.divIcon({
       className: '',
-      html: '<div class="campus-marker ' + (type === 'location' ? 'start' : '') + '"><div class="marker-pin"></div><div class="marker-label">' + esc(site.name) + '</div></div>',
+      html: '<div class="campus-marker ' + (type === 'location' ? 'start' : '') + '"><div class="marker-pin">' + (type === 'location' ? '<span class="marker-person"></span>' : '') + '</div><div class="marker-label">' + esc(label) + '</div></div>',
       iconSize: [40, 46],
       iconAnchor: [20, 40],
     });
     const layer = L.marker([site.latitude, site.longitude], { icon });
     layer.addTo(markerLayer);
-    layer.on('click', () => {
-      if (state.route.polyline) return;
-      openMapSiteDialog(site);
-    });
     return { layer, site, id };
   }
 
@@ -583,25 +516,13 @@
     } catch (e) {}
   }
 
-  function openMapSiteDialog(site) {
-    const body = '<img src="' + esc(site.img) + '" style="height:180px;width:100%;object-fit:cover" />' +
-      '<div style="font-size:14px;margin-top:8px">' + esc(site.aliases || '') + '</div>' +
-      '<div style="font-size:14px;margin-top:6px">' + esc(site.desc || '') + '</div>';
-    openModal(esc(site.name), body, [
-      { text: '设为起点', onClick: () => { state.start = { name: site.name, latitude: site.latitude, longitude: site.longitude }; syncMapInputs(); } },
-      { text: '设为终点', onClick: () => { state.end = { name: site.name, latitude: site.latitude, longitude: site.longitude }; syncMapInputs(); } },
-    ]);
-    $('#modalBody img').addEventListener('click', () => previewImage(site.img));
-  }
-
   function changeCategory(i) {
     state.mapCategory = i;
     $$('#mapCategories .map-cat').forEach((el, k) => el.classList.toggle('choose', k === i));
     const el = $('#mapCategories .map-cat[data-i="' + i + '"]');
     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     renderCategoryMarkers();
-    const cat = currentSiteData()[i];
-    if (cat) $('#mapBottomBtn').textContent = '🏫 ' + cat.name + ' 有 ' + cat.list.length + ' 个地点';
+    $('#mapBottomBtn').classList.add('hidden');
   }
 
   function locateMe() {
@@ -618,7 +539,7 @@
         if (def) {
           state.start = { name: def.name, latitude: def.latitude, longitude: def.longitude };
           syncMapInputs();
-          toast('当前位置不在校区内\n默认位置设为' + def.name, 2200);
+          toast('当前位置不在厂区内\n默认位置设为' + def.name, 2200);
         }
         renderCategoryMarkers();
       }
@@ -798,7 +719,7 @@
     const pl = [{ latitude: lat1, longitude: lng1 }, { latitude: mlat, longitude: mlng }, { latitude: lat2, longitude: lng2 }];
     drawRoute(pl, dur, dist, [
       { instruction: '从起点出发（估算路线，仅供参考）' },
-      { instruction: '沿校园道路前行' },
+      { instruction: '沿厂区道路前行' },
       { instruction: '到达终点（估算）' },
     ]);
   }
@@ -819,8 +740,9 @@
     state.route.duration = duration;
     state.route.distance = Math.round(distance);
     state.route.steps = steps;
+    $('#mapBottomBtn').classList.remove('hidden');
 
-    const sIcon = L.divIcon({ className: '', html: '<div class="campus-marker start"><div class="marker-pin"></div></div>', iconSize: [40, 46], iconAnchor: [20, 40] });
+    const sIcon = L.divIcon({ className: '', html: '<div class="campus-marker start"><div class="marker-pin"><span class="marker-person"></span></div><div class="marker-label">当前位置</div></div>', iconSize: [40, 46], iconAnchor: [20, 40] });
     const eIcon = L.divIcon({ className: '', html: '<div class="campus-marker end"><div class="marker-pin"></div></div>', iconSize: [40, 46], iconAnchor: [20, 40] });
     L.marker([state.start.latitude, state.start.longitude], { icon: sIcon }).addTo(routeLayer);
     L.marker([state.end.latitude, state.end.longitude], { icon: eIcon }).addTo(routeLayer);
@@ -832,7 +754,7 @@
 
   function animateCar(path) {
     if (!path || path.length < 2) return;
-    const icon = L.divIcon({ className: '', html: '<div class="campus-marker start"><div class="marker-pin"></div></div>', iconSize: [40, 46], iconAnchor: [20, 40] });
+    const icon = L.divIcon({ className: '', html: '<div class="campus-marker start"><div class="marker-pin"><span class="marker-person"></span></div></div>', iconSize: [40, 46], iconAnchor: [20, 40] });
     const car = L.marker(path[0], { icon }).addTo(routeLayer);
     state.route.carMarker = car;
     const dur = 4000;
@@ -886,10 +808,6 @@
         '<div style="margin-top:6px">' + stepsHTML + '</div>' +
         '<div style="margin-top:6px">终点：' + esc(state.end.name) + '</div>',
         [{ text: '关闭' }]);
-    } else {
-      const cat = currentSiteData()[state.mapCategory];
-      if (!cat) return;
-      openModal(cat.name, cat.list.map((p, i) => '<div style="padding:6px 0;font-size:15px">' + (i + 1) + '.' + esc(p.name) + '</div>').join(''), [{ text: '关闭' }]);
     }
   }
 
@@ -1008,7 +926,7 @@
       '<div class="instruction-card"><div class="instruction-h"><img src="' + asset(MEDIA.map) + '" alt="" /><span>使用说明</span></div>' +
       '<div class="instruction-txt">&emsp;&emsp;“地点汇总”页展示了各地点类型的地点，可切换地点类型查看。点击可以查看地点介绍，设置为起点或终点并跳转到地图。</div>' +
       '<button class="instruction-btn" id="instrSite">去“地点汇总”页</button>' +
-      '<div class="instruction-txt">&emsp;&emsp;“地图”页展示了校园地图，可以在地图上选择地点或者搜索地点进行导航。</div>' +
+      '<div class="instruction-txt">&emsp;&emsp;“地图”页展示了厂区地图，可以在地图上选择地点或者搜索地点进行导航。</div>' +
       '<div class="instruction-row top"><div class="k">定位</div><div class="v">点击定位图标可以重新定位<br/>若不在学校，设置 ' + esc(name || '默认地点') + ' 为起点</div></div>' +
       '<div class="instruction-row"><div class="k">搜索</div><div class="v">点击搜索栏起点 / 终点输入框<br/>即可跳转到对应搜索页</div></div>' +
       '<div class="instruction-row"><div class="k">点击</div><div class="v">地点类型栏可以滑动点击<br/>点击地点可查看信息，并设为起点/终点<br/>点击底部可查看当前地点类型地点或路线信息</div></div>' +
@@ -1027,9 +945,9 @@
       '<div class="intro-swiper">' + slides + '</div>' +
       '<div class="intro-swiper-dots">' + MEDIA.swiper_background.map((_, i) => '<i class="' + (i === 0 ? 'on' : '') + '"></i>').join('') + '</div>' +
       '<div class="intro-nav" id="introNav"><img src="' + asset(MEDIA.navigation) + '" alt="导航" /></div>' +
-      '<div class="intro-title"><div class="cn">' + esc(si.school_name_full) + '</div><div class="en">' + esc(si.school_name_English_full) + '</div></div>' +
+      '<div class="intro-title"><span class="intro-kicker">FACTORY PROFILE</span><div class="cn">厂区简介</div><div class="intro-accent"></div><div class="intro-company"><span>' + esc(si.school_name_full) + '</span><span>' + esc(si.school_name_English_full) + '</span></div></div>' +
       '<div class="intro-text">' + esc(si.text) + '</div>' +
-      '<div class="intro-footer">信息来源：学校官网</div>';
+      '<div class="intro-footer">信息来源：英科医疗官网</div>';
     $('#introNav').addEventListener('click', () => { hideSub(); location.hash = '#/map'; });
     $$('.intro-swiper .slide img').forEach((img) => img.addEventListener('click', () => previewImage(img.src)));
   }
@@ -1064,54 +982,6 @@
       const m = panos[idx].info;
       openModal(m.title, m.content, [{ text: '关闭' }]);
     });
-  }
-
-  function renderGuidance(id) {
-    const words = SCHOOL.school_guide;
-    $('#guidanceBody').innerHTML =
-      '<div class="guide-search"><div class="box"><input id="guideInput" placeholder="输入关键词" /></div><button class="guide-go" id="guideSearchBtn">搜索</button></div>' +
-      '<div id="guideList"></div>';
-    const listEl = $('#guideList');
-    function renderList(arr) {
-      listEl.innerHTML = arr.map((g) =>
-        '<div class="guide-item"><div class="t">' + esc(g.title) + '</div><div class="c">' + esc(g.content) + '</div>' +
-        '<div class="imgs">' + (g.imageList || []).map((u) => '<img src="' + esc(u) + '" alt="" />').join('') + '</div></div>').join('');
-      $$('.guide-item img', listEl).forEach((img) => img.addEventListener('click', () => previewImage(img.src)));
-    }
-    renderList(words);
-    $('#guideInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
-    $('#guideSearchBtn').addEventListener('click', doSearch);
-    function doSearch() {
-      const q = ($('#guideInput').value || '').trim();
-      if (!q) { renderList(words); return; }
-      const res = words.filter((w) =>
-        (w.title || '').indexOf(q) !== -1 ||
-        (w.content || '').indexOf(q) !== -1 ||
-        (w.keywords || []).indexOf(q) !== -1);
-      if (!res.length) { toast('无搜索结果'); renderList(words); return; }
-      renderList(res);
-    }
-    setTimeout(() => {
-      const el = $('#guideList .guide-item:nth-child(' + (Number(id) + 1) + ')');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
-  }
-
-  function renderStatement() {
-    const info = DATA.information;
-    $('#statementBody').innerHTML =
-      '<div class="intro-title"><img src="' + asset(MEDIA.statement) + '" alt="" /><span class="t">软件声明</span></div>' +
-      '<div class="sec-title"><img src="' + asset(MEDIA.message) + '" alt="" /><span>声明</span></div>' +
-      '<div class="statement-line">' + esc(info.type) + '：' + esc(MINI_NAME) + '小程序</div>' +
-      '<div class="statement-line">作者：' + esc(info.author) + '</div>' +
-      '<div class="statement-line">指导老师：' + esc(info.teacher) + '</div>' +
-      '<div class="statement-line">版权归开发者所有！</div>' +
-      '<div class="sec-title"><img src="' + asset(MEDIA.zhixie) + '" alt="" /><span>致谢</span></div>' +
-      '<div class="statement-text">&emsp;&emsp;首先感谢各位小程序开发者，你们的小程序界面布局、开源代码、提供的思路给我提供了很大的帮助，没有你们的帮助，我的小程序不会做的那么好。</div>' +
-      '<img class="statement-img" src="' + asset(MEDIA.zhixie_kaifazhe) + '" alt="" />' +
-      '<div class="statement-text">&emsp;&emsp;其次感谢B站分享技术视频的up主们，没有你们的教学，我可能还在踌躇不前，望而却步。</div>' +
-      '<img class="statement-img" src="' + asset(MEDIA.zhixie_up) + '" alt="" />' +
-      '<div class="statement-footer">尊重劳动心血 | 感谢大佬付出</div>';
   }
 
   /* ---------- 启动 ---------- */

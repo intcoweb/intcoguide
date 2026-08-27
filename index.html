@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#ffffff" />
-  <title>桂院校园导航</title>
+  <title>安徽英科医疗导航</title>
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <!-- 校区切换 + 分类栏（无路线时） -->
+      <!-- 厂区切换 + 分类栏（无路线时） -->
       <div class="map-control" id="mapControl">
         <div class="map-campus-wrap" id="mapCampusWrap">
           <button class="picker" id="mapCampusBtn"></button>
@@ -59,11 +59,11 @@
         <div class="location" id="mapLocationBtn" title="定位">
           <img src="assets/images/location.png" alt="定位" />
         </div>
-        <button class="map-layer-toggle" id="mapLayerToggle" title="切换校园示意图/真实地图">示意图</button>
+        <button class="map-layer-toggle" id="mapLayerToggle" title="切换厂区示意图/真实地图">示意图</button>
       </div>
 
       <!-- 底部按钮 -->
-      <div class="map-bottom" id="mapBottomBtn"></div>
+      <div class="map-bottom hidden" id="mapBottomBtn"></div>
     </section>
 
     <!-- ======================= 地点汇总 Tab ======================= -->
@@ -85,11 +85,18 @@
 
     <!-- ======================= 首页 Tab ======================= -->
     <section class="page page-home" id="page-home">
-      <div class="home-hero">
-        <div class="home-swiper" id="homeSwiper"></div>
-        <div class="home-hero-badge">
-          <img class="home-logo" id="homeLogo" src="" alt="校徽" />
+      <section class="home-weather-panel" aria-label="厂区天气">
+        <div class="weather-panel-head">
+          <div>
+            <span class="weather-title-kicker">实时环境</span>
+            <h2>厂区天气</h2>
+          </div>
+          <span class="weather-live"><i></i>实时更新</span>
         </div>
+        <div class="weather-card" id="weatherCard"></div>
+      </section>
+
+      <div class="home-hero">
         <div class="home-hero-label" id="homeLabel"></div>
         <div class="home-school-name" id="homeSchoolName"></div>
       </div>
@@ -105,37 +112,7 @@
         <div class="home-functions" id="homeFunctions"></div>
       </div>
 
-      <div class="home-banner" id="homeWeatherTitle"></div>
-
-      <div class="home-card">
-        <div class="weather-card" id="weatherCard"></div>
-      </div>
-
       <div class="home-footer" id="homeFooter"></div>
-    </section>
-
-    <!-- ======================= 校园指南 Tab ======================= -->
-    <section class="page page-school" id="page-school">
-      <div class="school-list" id="schoolList"></div>
-    </section>
-
-    <!-- ======================= 更多 Tab ======================= -->
-    <section class="page page-more" id="page-more">
-      <div class="more-wrap">
-        <div class="more-profile">
-          <div class="more-profile-card">
-            <div class="more-avatar"><img src="assets/images/hat.png" alt="头像" /></div>
-            <div class="more-info">
-              <div class="more-name" id="moreName"></div>
-              <div class="more-welcome">欢迎使用校园导航小程序</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="more-menu" id="moreMenu"></div>
-
-        <div class="more-footer">桂院校园导航&ensp;|&ensp;版权归开发者所有</div>
-      </div>
     </section>
 
     <!-- ======================= 子页面（覆盖层） ======================= -->
@@ -160,7 +137,7 @@
     <section class="subpage" id="page-introduction">
       <div class="sub-nav">
         <button class="back" data-back>‹</button>
-        <span class="sub-title">学校简介</span>
+        <span class="sub-title">厂区简介</span>
       </div>
       <div class="introduction-body" id="introductionBody"></div>
     </section>
@@ -173,22 +150,6 @@
       <div class="pano-body" id="panoBody"></div>
     </section>
 
-    <section class="subpage" id="page-guidance">
-      <div class="sub-nav">
-        <button class="back" data-back>‹</button>
-        <span class="sub-title">校园指南</span>
-      </div>
-      <div class="guidance-body" id="guidanceBody"></div>
-    </section>
-
-    <section class="subpage" id="page-statement">
-      <div class="sub-nav">
-        <button class="back" data-back>‹</button>
-        <span class="sub-title">软件声明</span>
-      </div>
-      <div class="statement-body" id="statementBody"></div>
-    </section>
-
     <!-- 底部 TabBar -->
     <nav class="tabbar" id="tabbar">
       <a class="tab-item" data-route="#/map">
@@ -199,12 +160,6 @@
       </a>
       <a class="tab-item" data-route="#/home">
         <img class="tab-icon" src="assets/images/tabbar/icon_home.png" data-alt="assets/images/tabbar/icon_home_HL.png" alt="首页" /><span>首页</span>
-      </a>
-      <a class="tab-item" data-route="#/school">
-        <img class="tab-icon" src="assets/images/tabbar/icon_school.png" data-alt="assets/images/tabbar/icon_school_HL.png" alt="校园指南" /><span>校园指南</span>
-      </a>
-      <a class="tab-item" data-route="#/more">
-        <img class="tab-icon" src="assets/images/tabbar/icon_more.png" data-alt="assets/images/tabbar/icon_more_HL.png" alt="更多" /><span>更多</span>
       </a>
     </nav>
 

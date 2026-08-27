@@ -48,7 +48,7 @@ const server = http.createServer((req, res) => {
   const p = u.pathname;
 
   if (p === '/api/weather') {
-    const url = 'https://devapi.qweather.com/v7/weather/now?location=110.28,25.09&key=' + WEATHER_KEY;
+    const url = 'https://devapi.qweather.com/v7/weather/now?location=116.7235,33.87368&key=' + WEATHER_KEY;
     return getJson(url, (err, data) => {
       if (err) return json(res, 502, { error: 'weather proxy fail' });
       json(res, 200, data);

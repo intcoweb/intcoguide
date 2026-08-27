@@ -463,7 +463,7 @@ window.GLU_DATA = {
                 "name": "校史大厅",
                 "aliases": "",
                 "img": "https://cdnjson.com/images/2023/02/26/scenery_xiaoshi.jpg",
-                "desc": "记载了数十载桂院历程",
+                "desc": "记录企业发展历程",
                 "latitude": 25.09538,
                 "longitude": 110.279483
               },
@@ -1014,7 +1014,7 @@ window.GLU_DATA = {
                 "id": 1,
                 "name": "北门",
                 "aliases": "",
-                "img": "/images/school_logo.png",
+                "img": "assets/images/map_bottom1.png",
                 "desc": "",
                 "latitude": 25.267614,
                 "longitude": 110.324565
@@ -1023,7 +1023,7 @@ window.GLU_DATA = {
                 "id": 2,
                 "name": "西门",
                 "aliases": "",
-                "img": "/images/school_logo.png",
+                "img": "assets/images/map_bottom1.png",
                 "desc": "",
                 "latitude": 25.266358,
                 "longitude": 110.322793
@@ -1036,7 +1036,7 @@ window.GLU_DATA = {
   },
   "data": {
     "weatherKey": "de1f89544449420cb217032e79b9527c",
-    "miniprogram_name": "桂院校园导航",
+    "miniprogram_name": "安徽英科医疗导航",
     "information": {
       "type": "计算机设计大赛作品 | 毕业设计",
       "author": "理工学院 2019级 软件工程 吴警",
@@ -1069,19 +1069,19 @@ window.GLU_DATA = {
       }
     ],
     "school_information": {
-      "school_name_full": "桂林学院",
-      "school_name_English_full": "Guilin University",
-      "motto": "向学·向善·自律·自强",
-      "honor": "2025中国百强民办高校",
-      "build_time": 2001,
-      "school_type": "民办",
-      "institution_type": "综合类",
-      "location": "广西桂林・雁山",
-      "text": "桂林学院（Guilin University 代码：13641）是一所经教育部批准设置的国有民办普通本科高校，由广西壮族自治区教育厅主管、桂林新城投资开发集团有限公司举办。学校前身系广西师范大学与社会投资方于2001年5月合作创办的广西师范大学漓江学院；2004年1月，经教育部确认取得“独立学院”办学资格；2021年5月，教育部致函广西壮族自治区人民政府，同意广西师范大学漓江学院转设并更名为桂林学院。"
+      "school_name_full": "安徽英科医疗",
+      "school_name_English_full": "Anhui Intco Medical",
+      "motto": "用人类智慧的结晶，服务于人类的健康需求",
+      "honor": "深交所创业板上市企业",
+      "build_time": 2009,
+      "school_type": "高科技制造",
+      "institution_type": "医疗器械耗材",
+      "location": "安徽省淮北市濉溪县濉芜经济开发区海棠南路6号",
+      "text": "英科医疗科技股份有限公司（简称“英科医疗”，股票代码：300677）是一家专注于医疗器械耗材研发、生产与营销的高科技制造企业，于2017年7月在深圳证券交易所创业板上市。公司业务涵盖医用耗材、康复医疗器械、理疗护理等系列产品，广泛应用于医疗机构、养老护理机构、家庭日用及其他相关行业。英科医疗面向全球市场，为客户提供实用可靠的产品与优质高效的服务。安徽英科医疗厂区位于安徽省淮北市濉溪县濉芜经济开发区海棠南路6号。"
     },
     "school_guide": [
       {
-        "title": "桂院校园导航",
+        "title": "安徽英科医疗导航",
         "content": "因桂林学院二期工程仍在建设中，现有导航软件暂无该地区地图，故开发此小程序为同学们提供基础地图显示服务。\n\n因现有资料较少等原因，本小程序可能会存在许多问题，请以实际情况为准。",
         "imageList": [
           "https://cdnjson.com/images/2024/02/19/erqi3dbb1a5741ffb0a2.png"
@@ -1237,7 +1237,6 @@ window.GLU_DATA = {
     "videourl": "",
     "contact": "https://cdnjson.com/images/2023/02/26/contact.png",
     "miniprogramming_ma": "https://s1.imagehub.cc/images/2024/03/20/b2b3bfb91a1ee49b269b93f6ffed651e.jpeg",
-    "statement": "/images/statement.png",
     "map_bottom": "assets/images/map_bottom1.png",
     "exchange": "https://lbs.gtimg.com/visual/miniprogram-plugin/route-planning/assets/exchange.png",
     "location": "/images/location.png",
@@ -1249,8 +1248,6 @@ window.GLU_DATA = {
     "map": "/images/map.png",
     "tag": "/images/tag.png",
     "little_location": "https://lbs.gtimg.com/visual/miniprogram-plugin/route-planning/assets/route_end.png",
-    "school_logo": "/images/school_logo.png",
-    "label": "/images/label.png",
     "laba": "/images/laba.png",
     "school_icon": "/images/school_icon.png",
     "book": "/images/book.png",
@@ -1261,27 +1258,15 @@ window.GLU_DATA = {
     "wave": "https://cdnjson.com/images/2024/02/19/wave1c95582ec21c3965.gif",
     "function_buttons": [
       "/images/button/map_navigation.png",
-      "/images/button/school_guide.png",
       "/images/button/site_summary.png",
       "/images/button/friendly_link.png",
-      "/images/button/site_popularity.png",
-      "/images/button/panoramic_map.png"
+      "/images/button/site_popularity.png"
     ],
     "navigation": "/images/navigation.png",
     "more": "/images/more.png",
     "judge": "/images/judge.png",
     "text": "/images/text.png",
-    "avatarUrl": "/images/hat.png",
-    "green_arrow": "/images/green_arrow.png",
     "note": "/images/note.png",
-    "users": "/images/users.png",
-    "chat": "/images/chat.png",
-    "feedback": "/images/feedback.png",
-    "share": "/images/share.png",
-    "message": "/images/message.png",
-    "zhixie": "/images/zhixie.png",
-    "zhixie_kaifazhe": "/images/zhixie_kaifazhe.jpg",
-    "zhixie_up": "/images/zhixie_up.jpg",
     "zhixie_honghui": "https://cdnjson.com/images/2023/02/26/zhixie_honghui.jpg",
     "notes": "/images/notes.png",
     "Marker2_Activated": "https://3gimg.qq.com/lightmap/xcx/demoCenter/images/Marker2_Activated@3x.png",
@@ -1291,3 +1276,165 @@ window.GLU_DATA = {
     "car": "https://mapapi.qq.com/web/lbs/javascriptGL/demo/img/car.png"
   }
 };
+
+window.GLU_DATA.map = {
+  "mapKey": "ZQWBZ-NQBLV-W7CPF-U7QIR-5HBNQ-AOFUE",
+  "longitude": 116.8014,
+  "latitude": 33.8888,
+  "enablepoi": false,
+  "showLocation": true,
+  "scale": 16.5,
+  "site_data": [
+    {
+      "id": 1,
+      "name": "安徽英科医疗",
+      "longitude": 116.8014,
+      "latitude": 33.8888,
+      "range": [
+        { "latitude": 33.8955, "longitude": 116.7945 },
+        { "latitude": 33.8955, "longitude": 116.8070 },
+        { "latitude": 33.8820, "longitude": 116.8070 },
+        { "latitude": 33.8820, "longitude": 116.7945 }
+      ],
+      "site_id": [1, 1],
+      "isUseMapImg": true,
+      "img": "assets/images/map_bottom1.png",
+      "bounds": {
+        "opacity": 1,
+        "east": 116.8070,
+        "north": 33.88875,
+        "south": 33.8820,
+        "west": 116.79914
+      },
+      "category_list": [
+        {
+          "id": 1,
+          "name": "主要地点",
+          "list": [
+            { "id": 1, "name": "安徽英科医疗", "aliases": "安徽英科医疗用品有限公司（淮北）", "img": "assets/images/map_bottom1.png", "desc": "安徽英科医疗厂区，地址：安徽省淮北市濉溪县濉溪芜湖现代产业园海棠南路6号。", "latitude": 33.885653, "longitude": 116.804739 },
+            { "id": 2, "name": "办公室", "aliases": "综合办公区域", "img": "assets/images/map_bottom1.png", "desc": "厂区办公区域。", "latitude": 33.885971, "longitude": 116.805043 },
+            { "id": 3, "name": "工厂大门", "aliases": "主出入口", "img": "assets/images/map_bottom1.png", "desc": "厂区主要出入口。", "latitude": 33.884700, "longitude": 116.806057 },
+            { "id": 4, "name": "停车场", "aliases": "车辆停放区域", "img": "assets/images/map_bottom1.png", "desc": "员工及访客车辆停放区域。", "latitude": 33.886712, "longitude": 116.803928 },
+            { "id": 5, "name": "待建区域", "aliases": "规划建设区域", "img": "assets/images/map_bottom1.png", "desc": "厂区规划建设区域。", "latitude": 33.887135, "longitude": 116.802408 }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "丁腈车间",
+          "list": [
+            { "id": 1, "name": "丁腈车间1", "aliases": "丁腈生产车间", "img": "assets/images/map_bottom1.png", "desc": "丁腈手套生产车间。", "latitude": 33.883747, "longitude": 116.799569 },
+            { "id": 2, "name": "丁腈车间2", "aliases": "丁腈生产车间", "img": "assets/images/map_bottom1.png", "desc": "丁腈手套生产车间。", "latitude": 33.885971, "longitude": 116.799569 },
+            { "id": 3, "name": "丁腈车间3", "aliases": "丁腈生产车间", "img": "assets/images/map_bottom1.png", "desc": "丁腈手套生产车间。", "latitude": 33.888088, "longitude": 116.799569 },
+            { "id": 4, "name": "丁腈车间4", "aliases": "丁腈生产车间", "img": "assets/images/map_bottom1.png", "desc": "丁腈手套生产车间。", "latitude": 33.891053, "longitude": 116.798251 },
+            { "id": 5, "name": "丁腈车间5", "aliases": "丁腈生产车间", "img": "assets/images/map_bottom1.png", "desc": "丁腈手套生产车间。", "latitude": 33.891265, "longitude": 116.802205 },
+            { "id": 6, "name": "丁腈车间6", "aliases": "丁腈生产车间", "img": "assets/images/map_bottom1.png", "desc": "丁腈手套生产车间。", "latitude": 33.891053, "longitude": 116.804232 }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "PVC车间",
+          "list": [
+            { "id": 1, "name": "PVC车间1", "aliases": "PVC生产车间", "img": "assets/images/map_bottom1.png", "desc": "PVC手套生产车间。", "latitude": 33.884276, "longitude": 116.803117 },
+            { "id": 2, "name": "PVC车间2", "aliases": "PVC生产车间", "img": "assets/images/map_bottom1.png", "desc": "PVC手套生产车间。", "latitude": 33.885971, "longitude": 116.803117 },
+            { "id": 3, "name": "PVC车间3", "aliases": "PVC生产车间", "img": "assets/images/map_bottom1.png", "desc": "PVC手套生产车间。", "latitude": 33.883006, "longitude": 116.803117 },
+            { "id": 4, "name": "PVC车间4", "aliases": "PVC生产车间", "img": "assets/images/map_bottom1.png", "desc": "PVC手套生产车间。", "latitude": 33.883218, "longitude": 116.804638 }
+          ]
+        },
+        {
+          "id": 4,
+          "name": "仓储与配料",
+          "list": [
+            { "id": 1, "name": "仓库", "aliases": "成品及物料仓储", "img": "assets/images/map_bottom1.png", "desc": "厂区仓储区域。", "latitude": 33.890947, "longitude": 116.796832 },
+            { "id": 2, "name": "配料区", "aliases": "生产配料区域", "img": "assets/images/map_bottom1.png", "desc": "生产配料区域。", "latitude": 33.891053, "longitude": 116.801698 },
+            { "id": 3, "name": "危化品仓库", "aliases": "危化品存储区域", "img": "assets/images/map_bottom1.png", "desc": "危险化学品专用仓储区域。", "latitude": 33.892641, "longitude": 116.798352 },
+            { "id": 4, "name": "原料罐区", "aliases": "原料存储区域", "img": "assets/images/map_bottom1.png", "desc": "生产原料存储区域。", "latitude": 33.892641, "longitude": 116.800177 },
+            { "id": 5, "name": "氮气室", "aliases": "气体供应设施", "img": "assets/images/map_bottom1.png", "desc": "厂区气体供应设施。", "latitude": 33.892853, "longitude": 116.802002 },
+            { "id": 6, "name": "变电所", "aliases": "供电设施", "img": "assets/images/map_bottom1.png", "desc": "厂区供电设施。", "latitude": 33.892853, "longitude": 116.803624 },
+            { "id": 7, "name": "小料库", "aliases": "辅料仓库", "img": "assets/images/map_bottom1.png", "desc": "生产辅料仓储区域。", "latitude": 33.892747, "longitude": 116.805043 },
+            { "id": 8, "name": "锅炉房一", "aliases": "动力设施", "img": "assets/images/map_bottom1.png", "desc": "厂区动力设施。", "latitude": 33.886500, "longitude": 116.800500 },
+            { "id": 9, "name": "锅炉房二", "aliases": "动力设施", "img": "assets/images/map_bottom1.png", "desc": "厂区动力设施。", "latitude": 33.889000, "longitude": 116.800500 },
+            { "id": 10, "name": "35KV变电站", "aliases": "供电设施", "img": "assets/images/map_bottom1.png", "desc": "厂区高压供电设施。", "latitude": 33.883500, "longitude": 116.801500 }
+          ]
+        },
+        {
+          "id": 5,
+          "name": "环保设施",
+          "list": [
+            { "id": 1, "name": "污水处理一期", "aliases": "污水处理设施", "img": "assets/images/map_bottom1.png", "desc": "厂区污水处理设施。", "latitude": 33.888829, "longitude": 116.802205 },
+            { "id": 2, "name": "污水处理二期", "aliases": "污水处理设施", "img": "assets/images/map_bottom1.png", "desc": "厂区污水处理设施。", "latitude": 33.888724, "longitude": 116.803421 },
+            { "id": 3, "name": "净化池", "aliases": "环保处理设施", "img": "assets/images/map_bottom1.png", "desc": "厂区环保处理设施。", "latitude": 33.889465, "longitude": 116.799569 },
+            { "id": 4, "name": "水池", "aliases": "厂区水务设施", "img": "assets/images/map_bottom1.png", "desc": "厂区水务设施。", "latitude": 33.889147, "longitude": 116.798961 },
+            { "id": 5, "name": "垃圾处理站", "aliases": "固废处理设施", "img": "assets/images/map_bottom1.png", "desc": "厂区垃圾处理设施。", "latitude": 33.889994, "longitude": 116.798048 },
+            { "id": 6, "name": "废品回收站", "aliases": "回收处理区域", "img": "assets/images/map_bottom1.png", "desc": "厂区废品回收区域。", "latitude": 33.888618, "longitude": 116.796426 }
+          ]
+        },
+        {
+          "id": 6,
+          "name": "生活配套",
+          "list": [
+            { "id": 1, "name": "食堂", "aliases": "员工餐饮区域", "img": "assets/images/map_bottom1.png", "desc": "员工用餐区域。", "latitude": 33.886606, "longitude": 116.805550 },
+            { "id": 2, "name": "餐厅", "aliases": "员工餐饮区域", "img": "assets/images/map_bottom1.png", "desc": "员工餐饮区域。", "latitude": 33.887347, "longitude": 116.805550 },
+            { "id": 3, "name": "公寓楼A", "aliases": "员工住宿区域", "img": "assets/images/map_bottom1.png", "desc": "员工住宿区域。", "latitude": 33.888194, "longitude": 116.805246 },
+            { "id": 4, "name": "公寓楼B", "aliases": "员工住宿区域", "img": "assets/images/map_bottom1.png", "desc": "员工住宿区域。", "latitude": 33.888194, "longitude": 116.806057 },
+            { "id": 5, "name": "篮球场", "aliases": "员工活动区域", "img": "assets/images/map_bottom1.png", "desc": "员工休闲活动区域。", "latitude": 33.886288, "longitude": 116.796426 },
+            { "id": 6, "name": "绿化区域", "aliases": "厂区绿化", "img": "assets/images/map_bottom1.png", "desc": "厂区绿化区域。", "latitude": 33.884382, "longitude": 116.796122 },
+            { "id": 7, "name": "门卫室", "aliases": "门岗管理", "img": "assets/images/map_bottom1.png", "desc": "厂区门岗管理区域。", "latitude": 33.885124, "longitude": 116.805753 },
+            { "id": 8, "name": "卫生间", "aliases": "公共服务设施", "img": "assets/images/map_bottom1.png", "desc": "厂区公共服务设施。", "latitude": 33.885971, "longitude": 116.806057 }
+          ]
+        }
+      ]
+    }
+  ]
+};
+window.GLU_DATA.media.swiper_background = ["assets/images/map_bottom1.png"];
+
+(function () {
+  const map = window.GLU_DATA.map;
+  const target = { latitude: 33.87368, longitude: 116.7235 };
+  const deltaLatitude = target.latitude - map.latitude;
+  const deltaLongitude = target.longitude - map.longitude;
+  const shiftPoint = (point) => {
+    if (!point || !Number.isFinite(Number(point.latitude)) || !Number.isFinite(Number(point.longitude))) return;
+    point.latitude = Number(point.latitude) + deltaLatitude;
+    point.longitude = Number(point.longitude) + deltaLongitude;
+  };
+
+  map.site_data.forEach((site) => {
+    shiftPoint(site);
+    (site.range || []).forEach(shiftPoint);
+    if (site.bounds) {
+      site.bounds.north += deltaLatitude;
+      site.bounds.south += deltaLatitude;
+      site.bounds.east += deltaLongitude;
+      site.bounds.west += deltaLongitude;
+    }
+    (site.category_list || []).forEach((category) => (category.list || []).forEach(shiftPoint));
+  });
+
+  map.latitude = target.latitude;
+  map.longitude = target.longitude;
+  const factoryBounds = map.site_data[0] && map.site_data[0].bounds;
+  if (factoryBounds) {
+    const halfLatitude = (factoryBounds.north - factoryBounds.south) / 2;
+    const halfLongitude = (factoryBounds.east - factoryBounds.west) / 2;
+    const visualOffset = { latitude: 0.00035, longitude: -0.00015 };
+    factoryBounds.north = target.latitude + visualOffset.latitude + halfLatitude;
+    factoryBounds.south = target.latitude + visualOffset.latitude - halfLatitude;
+    factoryBounds.east = target.longitude + visualOffset.longitude + halfLongitude;
+    factoryBounds.west = target.longitude + visualOffset.longitude - halfLongitude;
+  }
+  const defaultSite = map.site_data[0] && map.site_data[0].category_list
+    ? map.site_data[0].category_list.flatMap((category) => category.list || []).find((point) => point.name === '安徽英科医疗')
+    : null;
+  if (defaultSite) {
+    defaultSite.latitude = target.latitude;
+    defaultSite.longitude = target.longitude;
+  }
+  const gateSite = map.site_data[0] && map.site_data[0].category_list
+    ? map.site_data[0].category_list.flatMap((category) => category.list || []).find((point) => point.name === '工厂大门')
+    : null;
+  if (gateSite) {
+    gateSite.latitude = 33.8714;
+    gateSite.longitude = 116.7268;
+  }
+})();
