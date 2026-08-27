@@ -383,6 +383,7 @@
   let polygonLayer = null;
   let markerLayer = null;
   let routeLayer = null;
+  let overlayToken = 0;
 
   function onMapShow() {
     if (!state.mapInited) {
@@ -470,8 +471,27 @@
     // 默认叠加厂区示意图；右上角可切换真实底图和厂区边界。
     if (state.showMapImg && campus.isUseMapImg && campus.img && campus.bounds) {
       const b = campus.bounds;
-      groundOverlay = L.imageOverlay(campus.img, [[b.south, b.west], [b.north, b.east]], { opacity: b.opacity || 0.8 }).addTo(map);
+      const token = ++overlayToken;
+      const image = new Image();
+      const addOverlay = (bounds) => {
+        if (token !== overlayToken || !state.showMapImg) return;
+        groundOverlay = L.imageOverlay(campus.img, bounds, { opacity: b.opacity || 0.8 }).addTo(map);
+      };
+      image.onload = () => {
+        const centerLatitude = (b.north + b.south) / 2;
+        const latitudeSpan = b.north - b.south;
+        const imageRatio = image.naturalWidth / image.naturalHeight;
+        const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
+        const centerLongitude = (b.east + b.west) / 2;
+        addOverlay([
+          [b.south, centerLongitude - longitudeSpan / 2],
+          [b.north, centerLongitude + longitudeSpan / 2],
+        ]);
+      };
+      image.onerror = () => addOverlay([[b.south, b.west], [b.north, b.east]]);
+      image.src = campus.img;
     } else if (campus.range && campus.range.length) {
+      overlayToken += 1;
       polygonLayer = L.polygon(campus.range.map((p) => [p.latitude, p.longitude]), {
         color: '#789cff', weight: 2, fillColor: '#d5dff2', fillOpacity: 0.2,
       }).addTo(map);
