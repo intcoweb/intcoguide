@@ -60,7 +60,11 @@
     }
     $('#modalMask').classList.add('show');
   }
-  function hideModal() { $('#modalMask').classList.remove('show'); modalAction = null; }
+  function hideModal() {
+    $('#modalMask').classList.remove('show');
+    modalAction = null;
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  }
   $('#modalMask').addEventListener('click', (e) => { if (e.target === $('#modalMask')) hideModal(); });
 
   /* 图片预览（lightbox 风格弹窗） */
@@ -479,40 +483,103 @@
     markerLayer.clearLayers();
     const cat = currentSiteData()[state.mapCategory];
     if (!cat) return;
+    const tone = markerToneOf(cat);
 
     let markers = [];
-    const def = state.mapDefaultPoint;
-    const judge = cat.list.some((item) => item === def);
-    const idx = cat.list.findIndex((item) => item === def);
-    const loc = (state.start && state.start.latitude) ? state.start : def;
-    if (!judge || state.mapIsAtSchool) {
-      markers.push(formMarker(loc, 'location', -1));
-    }
+    const loc = (state.start && state.start.latitude) ? state.start : null;
+    if (loc) markers.push(formMarker(loc, 'location', -1));
     cat.list.forEach((site, i) => {
-      const isDef = site === def;
-      markers.push(formMarker(site, isDef ? 'location' : 'site', i + 1));
+      const isCurrent = loc && Math.abs(Number(site.latitude) - Number(loc.latitude)) < 0.000001 && Math.abs(Number(site.longitude) - Number(loc.longitude)) < 0.000001;
+      if (!isCurrent) markers.push(formMarker(site, 'site', i + 1, tone));
     });
     fitMarkers(markers);
   }
 
-  function formMarker(site, type, id) {
+  function markerToneOf(category) {
+    const tones = {
+      1: 'main',
+      2: 'nitrile',
+      3: 'pvc',
+      4: 'storage',
+      5: 'eco',
+      6: 'life',
+    };
+    return tones[category.id] || 'main';
+  }
+
+  function formMarker(site, type, id, tone) {
     const label = type === 'location' ? '当前位置' : site.name;
+    const toneClass = type === 'site' && tone ? ' tone-' + tone : '';
     const icon = L.divIcon({
       className: '',
-      html: '<div class="campus-marker ' + (type === 'location' ? 'start' : '') + '"><div class="marker-pin">' + (type === 'location' ? '<span class="marker-person"></span>' : '') + '</div><div class="marker-label">' + esc(label) + '</div></div>',
+      html: '<div class="campus-marker' + toneClass + (type === 'location' ? ' start' : '') + '"><div class="marker-pin">' + (type === 'location' ? '<span class="marker-person"></span>' : '') + '</div><div class="marker-label">' + esc(label) + '</div></div>',
       iconSize: [40, 46],
       iconAnchor: [20, 40],
     });
     const layer = L.marker([site.latitude, site.longitude], { icon });
     layer.addTo(markerLayer);
+    layer.on('click', () => {
+      if (!state.route.polyline) openMapSiteDialog(site);
+    });
     return { layer, site, id };
+  }
+
+  function speakSite(site, button) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      toast('当前浏览器暂不支持语音讲解');
+      return;
+    }
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      if (button) {
+        button.classList.remove('playing');
+        button.innerHTML = '<span>▶</span>语音讲解';
+      }
+      return;
+    }
+    const text = [site.name, site.aliases, site.desc].filter(Boolean).join('。');
+    const utterance = new SpeechSynthesisUtterance(text || site.name);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    if (button) {
+      button.classList.add('playing');
+      button.innerHTML = '<span>■</span>停止讲解';
+    }
+    const reset = () => {
+      if (!button) return;
+      button.classList.remove('playing');
+      button.innerHTML = '<span>▶</span>语音讲解';
+    };
+    utterance.onend = reset;
+    utterance.onerror = reset;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function openMapSiteDialog(site) {
+    const body =
+      '<div class="site-modal-kicker">LOCATION GUIDE</div>' +
+      '<div class="site-modal-title">' + esc(site.name) + '</div>' +
+      '<div class="site-modal-alias">' + esc(site.aliases || '厂区地点') + '</div>' +
+      '<div class="site-modal-desc">' + esc(site.desc || '暂无详细介绍') + '</div>' +
+      '<button class="voice-btn" id="siteVoiceBtn" type="button"><span>▶</span>语音讲解</button>';
+    openModal(esc(site.name), body, [
+      { text: '设为起点', onClick: () => { state.start = { name: site.name, latitude: site.latitude, longitude: site.longitude }; syncMapInputs(); renderCategoryMarkers(); } },
+      { text: '设为终点', onClick: () => { state.end = { name: site.name, latitude: site.latitude, longitude: site.longitude }; syncMapInputs(); } },
+      { text: '关闭' },
+    ]);
+    const voiceBtn = $('#siteVoiceBtn');
+    if (voiceBtn) voiceBtn.addEventListener('click', () => speakSite(site, voiceBtn));
   }
 
   function fitMarkers(markers) {
     if (!markers.length) return;
-    const latlngs = markers.map((m) => [m.site.latitude, m.site.longitude]);
+    const campus = currentCampus();
+    const latlngs = (campus.range || []).map((p) => [p.latitude, p.longitude]);
+    latlngs.push(...markers.map((m) => [m.site.latitude, m.site.longitude]));
     try {
-      map.fitBounds(L.latLngBounds(latlngs).pad(0.25), { padding: [80, 60] });
+      map.fitBounds(L.latLngBounds(latlngs).pad(0.06), { paddingTopLeft: [24, 172], paddingBottomRight: [24, 72] });
     } catch (e) {}
   }
 

@@ -1302,9 +1302,9 @@ window.GLU_DATA.map = {
       "bounds": {
         "opacity": 1,
         "east": 116.8070,
-        "north": 33.88875,
+        "north": 33.8955,
         "south": 33.8820,
-        "west": 116.79914
+        "west": 116.7945
       },
       "category_list": [
         {
@@ -1413,16 +1413,6 @@ window.GLU_DATA.media.swiper_background = ["assets/images/map_bottom1.png"];
 
   map.latitude = target.latitude;
   map.longitude = target.longitude;
-  const factoryBounds = map.site_data[0] && map.site_data[0].bounds;
-  if (factoryBounds) {
-    const halfLatitude = (factoryBounds.north - factoryBounds.south) / 2;
-    const halfLongitude = (factoryBounds.east - factoryBounds.west) / 2;
-    const visualOffset = { latitude: 0.00035, longitude: -0.00015 };
-    factoryBounds.north = target.latitude + visualOffset.latitude + halfLatitude;
-    factoryBounds.south = target.latitude + visualOffset.latitude - halfLatitude;
-    factoryBounds.east = target.longitude + visualOffset.longitude + halfLongitude;
-    factoryBounds.west = target.longitude + visualOffset.longitude - halfLongitude;
-  }
   const defaultSite = map.site_data[0] && map.site_data[0].category_list
     ? map.site_data[0].category_list.flatMap((category) => category.list || []).find((point) => point.name === '安徽英科医疗')
     : null;
