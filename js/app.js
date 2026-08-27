@@ -483,7 +483,7 @@
         const latitudeSpan = (b.north - b.south) * imageScale;
         const imageRatio = image.naturalWidth / image.naturalHeight;
         const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
-        const imageOffset = { latitude: 0.00022, longitude: 0.00022 };
+        const imageOffset = { latitude: 0.00022, longitude: 0.00048 };
         const adjustedCenterLatitude = centerLatitude + imageOffset.latitude;
         const centerLongitude = (b.east + b.west) / 2 + imageOffset.longitude;
         addOverlay([
