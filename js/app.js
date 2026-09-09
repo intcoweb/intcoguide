@@ -1,7 +1,3 @@
-/* =========================================================
-   桂院校园导航 · 网页复刻版
-   单页应用逻辑（路由 / 各页面 / 地图 / 天气 / 路线 / 搜索）
-   ========================================================= */
 (function () {
   'use strict';
 
@@ -12,6 +8,81 @@
   const SCHOOL = D.school;
   const MEDIA = D.media;
   const MINI_NAME = DATA.miniprogram_name;
+
+  /* 青州地图模块（可整段删除） */
+  const QINGZHOU_MAP_CONFIG = {
+    center: [36.76472325, 118.38438492],
+    zoom: 16,
+    overlay: {
+      image: 'assets/images/qingzhou-intco-old-map.svg?v=20260829-5',
+      bounds: [[36.75901813, 118.3804614], [36.76873218, 118.3881691]],
+    },
+  };
+  const QINGZHOU_GUIDE_ROUTE = [
+    [36.767321, 118.384215],
+    [36.766827, 118.384283],
+    [36.766688, 118.382893],
+    [36.765153, 118.382848],
+    [36.765126, 118.385274],
+    [36.764166, 118.385273],
+    [36.764152, 118.383295],
+    [36.764256, 118.383252],
+    [36.764248, 118.382672],
+    [36.765115, 118.382845],
+    [36.766665, 118.382866],
+    [36.766822, 118.384302],
+  ];
+
+  const AREA_GUIDES = {
+    '主要地点': {
+      en: 'MAIN / AREA', subtitle: '核心功能区域',
+      steps: [
+        { t: '登记进入', d: '经工厂大门核实登记后进入厂区。' },
+        { t: '厂区导览', d: '沿主路参观办公楼与生产区域。' },
+        { t: '前往目标', d: '根据导航前往目的车间或设施。' }
+      ]
+    },
+    '丁腈车间': {
+      en: 'NITRILE / WORKSHOP', subtitle: '丁腈手套生产线',
+      steps: [
+        { t: '配料投料', d: '按配方进行原料配料与投料。' },
+        { t: '浸渍成型', d: '生产线完成手套浸渍、成型。' },
+        { t: '烘干包装', d: '烘干、脱模后检验并包装入库。' }
+      ]
+    },
+    'PVC车间': {
+      en: 'PVC / WORKSHOP', subtitle: 'PVC手套生产线',
+      steps: [
+        { t: '配料混料', d: 'PVC 糊料按比例配制。' },
+        { t: '浸渍烘烤', d: '模具浸渍后进入烘烤定型。' },
+        { t: '冷却包装', d: '冷却、脱模后分拣包装。' }
+      ]
+    },
+    '仓储与配料': {
+      en: 'STORAGE / AREA', subtitle: '仓储与动力保障',
+      steps: [
+        { t: '原料入库', d: '原料按品类分类存储并登记。' },
+        { t: '按需配送', d: '按生产计划向车间配送物料。' },
+        { t: '能源保障', d: '变电、锅炉与气体供应保障生产。' }
+      ]
+    },
+    '环保设施': {
+      en: 'ENVIRONMENT', subtitle: '绿色环保处理系统',
+      steps: [
+        { t: '集中收集', d: '生产废水经管网集中收集。' },
+        { t: '净化处理', d: '通过沉淀、生化等工艺净化水质。' },
+        { t: '循环利用', d: '达标后回用或合规排放，践行绿色生产。' }
+      ]
+    },
+    '生活配套': {
+      en: 'LIFE / AREA', subtitle: '员工生活服务区',
+      steps: [
+        { t: '用餐休息', d: '食堂与餐厅提供员工用餐休息。' },
+        { t: '休闲运动', d: '篮球场与绿化区提供休闲空间。' },
+        { t: '安全服务', d: '门卫室与卫生间提供保障服务。' }
+      ]
+    }
+  };
 
   /* ---------- 工具函数 ---------- */
   const $ = (sel, root) => (root || document).querySelector(sel);
@@ -42,6 +113,7 @@
   /* ---------- 弹窗 ---------- */
   let modalAction = null;
   function openModal(title, bodyHTML, buttons) {
+    $('#modalBox').classList.remove('explain-mode');
     $('#modalTitle').textContent = title || '';
     $('#modalBody').innerHTML = bodyHTML || '';
     const footer = $('#modalFooter');
@@ -62,6 +134,7 @@
   }
   function hideModal() {
     $('#modalMask').classList.remove('show');
+    $('#modalBox').classList.remove('explain-mode');
     modalAction = null;
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   }
@@ -76,7 +149,7 @@
   const state = {
     tab: 'home',
     sub: null,
-    choose: 0,             // 校区索引
+    choose: 0,             // 园区索引
     campus_list: [],
     campus_name_list: [],
     start: { name: '', latitude: '', longitude: '' },
@@ -87,7 +160,8 @@
     mapDefaultPoint: null,
     mapPoints: [],
     mapInited: false,
-    showMapImg: true,        // 默认显示原小程序的手绘校园示意图；可切换到真实地图
+    qingzhouMapInited: false,
+    showMapImg: true,
     route: {
       polyline: null,     // Leaflet polyline
       carMarker: null,
@@ -102,7 +176,7 @@
     siteCategory: 0,
   };
 
-  /* ---------- 校区数据辅助 ---------- */
+  /* ---------- 园区数据辅助 ---------- */
   function currentCampus() {
     return MAP.site_data[state.choose] || MAP.site_data[0];
   }
@@ -111,16 +185,21 @@
   }
   function defaultPointOf(campus) {
     const c = campus || currentCampus();
-    if (!c || !c.site_id) return null;
-    const cat = (c.category_list || []).find((x) => x.id === c.site_id[0]);
-    if (!cat) return null;
-    return cat.list.find((x) => x.id === c.site_id[1]) || null;
+    if (!c) return null;
+    const cats = c.category_list || [];
+    for (const cat of cats) {
+      const found = (cat.list || []).find((x) => x.name === '工厂大门');
+      if (found) return found;
+    }
+    if (!c.site_id) return null;
+    const cat = cats.find((x) => x.id === c.site_id[0]);
+    return (cat && cat.list && cat.list.find((x) => x.id === c.site_id[1])) || null;
   }
 
   /* =========================================================
      路由
      ========================================================= */
-  const TAB_ROUTES = ['map', 'site', 'home'];
+  const TAB_ROUTES = ['map', 'qingzhou-map', 'site', 'home'];
 
   function setActiveTab(tab) {
     state.tab = tab;
@@ -164,6 +243,7 @@
       hideSub();
       setActiveTab(name);
       if (name === 'map') onMapShow();
+      if (name === 'qingzhou-map') onQingzhouMapShow();
       if (name === 'site') onSiteShow();
       if (name === 'home') onHomeShow();
     } else if (name === 'search') {
@@ -207,39 +287,67 @@
   }
   function renderHome() {
     const si = SCHOOL.school_information;
-    $('#homeLabel').textContent = '厂区简介';
-    $('#homeSchoolName').textContent = si.school_name_full;
+    const labelSpan = $('#homeLabel span');
+    if (labelSpan) labelSpan.textContent = '厂区简介';
+    $('#homeSchoolName').textContent = si.home_title || si.school_name_full;
+    $('#homeEnglish').textContent = si.school_name_English_full || 'ANHUI INTCO MEDICAL';
 
-    // 校训 / 荣誉
+    // 荣誉 / 上市标签
+    $('#homeTags').innerHTML =
+      '<span class="tag tag-accent">' + esc(si.honor) + '</span>' +
+      '<span class="tag">股票代码 300677</span>';
+
+    // 企业使命
     $('#homeMotto').innerHTML =
-      '<div class="badge red">' + esc(si.motto) + '</div>' +
-      '<div class="badge blue">' + esc(si.honor) + '</div>';
+      '<span class="quote-label">基地简介</span>' +
+      '<p class="quote-text">' + esc(si.home_intro || si.motto) + '</p>';
 
-    // 信息
+    // 数据速览
     $('#homeInfo').innerHTML =
-      '<div class="col"><div>成立时间：' + esc(si.build_time) + '年</div><div class="home-info-sub">企业类型：' + esc(si.school_type) + '企业</div></div>' +
-      '<div class="col"><div>业务领域：' + esc(si.institution_type) + '</div><div class="home-info-sub">地址：' + esc(si.location) + '</div></div>';
+      '<div class="quick-grid">' +
+      '<div class="quick"><span class="quick-label">建立时间</span><strong>' + esc(si.build_time) + '</strong></div>' +
+      '<div class="quick"><span class="quick-label">企业类型</span><strong>' + esc(si.school_type) + '</strong></div>' +
+      '<div class="quick"><span class="quick-label">业务领域</span><strong>' + esc(si.institution_type) + '</strong></div>' +
+      '<div class="quick"><span class="quick-label">所在地</span><strong>安徽 · 淮北</strong></div>' +
+      '</div>' +
+      '<div class="quick-addr"><img src="' + asset(MEDIA.little_location) + '" alt="" /><span>' + esc(si.location) + '</span></div>';
 
     // 欢迎条
-    $('#homeBanner').innerHTML = '<img src="' + asset(MEDIA.laba) + '" alt="" /><span>欢迎使用' + esc(MINI_NAME) + '小程序</span>';
+    $('#homeBanner').innerHTML =
+      '<img class="banner-ic" src="' + asset(MEDIA.laba) + '" alt="" /><span>欢迎使用' + esc(MINI_NAME) + '小程序</span>';
 
     // 常用功能
-    const funcs = MEDIA.function_buttons;
     const funcConf = [
-      { img: funcs[0], label: '地图导航', act: () => { location.hash = '#/map'; } },
-      { img: funcs[2], label: '友情链接', act: openLinksDialog },
+      { icon: '🧭', label: '地图导航', sub: '厂区路径 · 规划路线', grad: 'orange', act: () => { location.hash = '#/map'; } },
+      { icon: '🏭', label: '厂区地图', sub: '全厂点位 · 一键找点', grad: 'teal', act: () => { location.hash = '#/site'; } },
+      { icon: '🌐', label: '英文官网', sub: 'INTCO Medical · Global', grad: 'blue', act: () => openLink('https://www.intcomedical.com') },
+      { icon: '🌏', label: '中文官网', sub: '英科医疗 · 官网', grad: 'green', act: () => openLink('https://www.intcomedical.com.cn') },
     ];
-    $('#homeFunctions').innerHTML = funcConf.map((f) => '<button><img src="' + asset(f.img) + '" alt="' + esc(f.label) + '" /></button>').join('');
-    $$('#homeFunctions button').forEach((btn, i) => btn.addEventListener('click', funcConf[i].act));
+    $('#homeFunctions').innerHTML = funcConf.map((f, i) =>
+      '<button class="func-card grad-' + f.grad + '" data-i="' + i + '">' +
+      '<span class="func-card-icon">' + f.icon + '</span>' +
+      '<span class="func-card-label">' + esc(f.label) + '</span>' +
+      '<span class="func-card-sub">' + esc(f.sub) + '</span>' +
+      '</button>').join('');
+    $$('#homeFunctions .func-card').forEach((btn) => {
+      const idx = Number(btn.dataset.i);
+      btn.addEventListener('click', () => funcConf[idx] && funcConf[idx].act());
+    });
 
     // 厂区简介跳转
     $('#homeLabel').addEventListener('click', () => { location.hash = '#/introduction'; });
 
     // 页脚
-    $('#homeFooter').textContent = MINI_NAME + '小程序 | 版权归开发者所有';
+    $('#homeFooter').textContent = MINI_NAME + ' · 智慧厂区服务';
 
     // 获取天气
     fetchWeather();
+  }
+
+  /* ---- 打开外部官网 ---- */
+  function openLink(url) {
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) location.href = url;
   }
 
   /* ---- 友情链接弹窗 ---- */
@@ -336,37 +444,44 @@
     const data = currentSiteData();
     const cat = data[state.siteCategory] || data[0];
     if (!cat) return;
-    $('#siteLeft').innerHTML = data.map((c, i) => '<div class="site-cat' + (i === state.siteCategory ? ' choose' : '') + '" data-i="' + i + '">' + esc(c.name) + '</div>').join('');
+    const icons = { '主要地点': '🏢', '丁腈车间': '🏭', 'PVC车间': '🧤', '仓储与配料': '📦', '环保设施': '♻️', '生活配套': '🍽️' };
+    $('#siteLeft').innerHTML = data.map((c, i) => {
+      const ic = icons[c.name] || '📍';
+      return '<button class="site-cat' + (i === state.siteCategory ? ' choose' : '') + '" data-i="' + i + '">' +
+        '<span class="cat-ic">' + ic + '</span><span class="cat-name">' + esc(c.name) + '</span></button>';
+    }).join('');
     $('#siteTitleText').textContent = cat.name;
     $('#siteTitleIcon').src = asset(MEDIA.tag);
-    $('#siteContent').innerHTML = cat.list.map((p, i) =>
-      '<div class="site-card" data-i="' + i + '"><img src="' + esc(p.img) + '" alt="" /><div class="site-card-name"><img src="' + asset(MEDIA.little_location) + '" alt="" />' + esc(p.name) + '</div></div>').join('');
+    const countEl = $('#siteTitleCount');
+    if (countEl) countEl.textContent = (cat.list ? cat.list.length : 0) + ' 个点位';
+    $('#siteContent').innerHTML = (cat.list || []).map((p, i) => {
+      const pos = ((i * 17) % 100) + '% ' + ((i * 31) % 100) + '%';
+      return '<button class="site-card" data-i="' + i + '">' +
+        '<span class="site-card-media"><img class="site-card-img" src="' + esc(p.img) + '" alt="" style="object-position:' + pos + '" loading="lazy" />' +
+        '<span class="site-card-num">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span class="site-card-type">' + esc(cat.name) + '</span></span>' +
+        '<span class="site-card-body"><strong class="site-card-name">' + esc(p.name) + '</strong>' +
+        '<span class="site-card-alias">' + esc(p.aliases || '') + '</span></span>' +
+        '</button>';
+    }).join('');
     $$('#siteLeft .site-cat').forEach((el) => el.addEventListener('click', () => {
       state.siteCategory = Number(el.dataset.i);
       renderSiteCategory();
     }));
     $$('#siteContent .site-card').forEach((el) => el.addEventListener('click', () => {
       const site = cat.list[Number(el.dataset.i)];
-      openSiteDialog(site);
+      openSiteDialog(site, cat.name);
     }));
   }
-  function openSiteDialog(site) {
-    if (!site) return;
-    const body = '<img src="' + esc(site.img) + '" style="height:180px;width:100%;object-fit:cover" />' +
-      '<div style="font-size:14px;margin-top:8px">' + esc(site.aliases || '') + '</div>' +
-      '<div style="font-size:14px;margin-top:6px">' + esc(site.desc || '') + '</div>';
-    openModal(esc(site.name), body, [
-      { text: '设为起点', onClick: () => { state.start = { name: site.name, latitude: site.latitude, longitude: site.longitude }; toast('已设置起点', 900); location.hash = '#/map'; } },
-      { text: '设为终点', onClick: () => { state.end = { name: site.name, latitude: site.latitude, longitude: site.longitude }; toast('已设置终点', 900); location.hash = '#/map'; } },
-    ]);
-    $('#modalBody img').addEventListener('click', () => previewImage(site.img));
+  function openSiteDialog(site, categoryName) {
+    openGuideDialog(site, categoryName);
   }
 
-  /* ---------- 校区选择 picker ---------- */
+  /* ---------- 园区选择 picker ---------- */
   function showCampusPicker(onPick) {
     const body = state.campus_name_list.map((n, i) =>
       '<div class="picker-opt' + (i === state.choose ? ' on' : '') + '" data-i="' + i + '" style="padding:12px;border-bottom:1px solid #eee;cursor:pointer;font-size:16px;display:flex;justify-content:space-between">' + esc(n) + (i === state.choose ? ' <span style="color:var(--menu)">✓</span>' : '') + '</div>').join('');
-    openModal('切换校区', body, [{ text: '取消' }]);
+    openModal('切换园区', body, [{ text: '取消' }]);
     $$('.picker-opt', $('#modalBody')).forEach((el) => el.addEventListener('click', () => {
       const i = Number(el.dataset.i);
       hideModal();
@@ -384,6 +499,228 @@
   let markerLayer = null;
   let routeLayer = null;
   let overlayToken = 0;
+
+  /* 青州地图模块（可整段删除） */
+  let qingzhouMap = null;
+  let qingzhouMapMarker = null;
+  let qingzhouMapOverlay = null;
+  let qingzhouMapRoute = null;
+  let qingzhouMapRouteMarkers = [];
+  let qingzhouMapRouteArrows = [];
+  let qingzhouMapOverlayVisible = true;
+  let qingzhouUserMarker = null;      // 用户当前位置 marker
+  let qingzhouWatchId = null;         // watchPosition 句柄
+  let qingzhouUserHeading = -1;       // 陀螺仪朝向（度，-1 表示未知）
+  let qingzhouLocationWatching = false;
+  let qingzhouCompassInited = false;
+
+  function qingzhouRouteBearing(start, end) {
+    const latitude = ((start[0] + end[0]) / 2) * Math.PI / 180;
+    return Math.atan2((end[1] - start[1]) * Math.cos(latitude), end[0] - start[0]) * 180 / Math.PI;
+  }
+
+  function onQingzhouMapShow() {
+    if (!state.qingzhouMapInited) {
+      state.qingzhouMapInited = true;
+      initQingzhouMap();
+    } else if (qingzhouMap) {
+      qingzhouMap.invalidateSize();
+    }
+  }
+
+  /* 用户位置 marker（带朝向箭头） */
+  function qingzhouUserIcon(heading) {
+    // 箭头为 CSS 三角形，默认朝北（0°），直接按朝向角度旋转
+    const deg = (typeof heading === 'number' && heading >= 0) ? heading : 0;
+    return L.divIcon({
+      className: 'qingzhou-user-marker-icon',
+      html: '<div class="user-heading" style="--heading:' + deg + 'deg"></div><div class="user-dot"></div>',
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+    });
+  }
+
+  /* 浏览器定位 WGS-84 -> 地图 GCJ-02 */
+  function qingzhouToGcj(lat, lng) {
+    const g = wgs2gcj(lat, lng);
+    return [g.lat, g.lng];
+  }
+
+  function updateQingzhouUserMarker(latLng, heading) {
+    if (!qingzhouMap) return;
+    if (!qingzhouUserMarker) {
+      qingzhouUserMarker = L.marker(latLng, {
+        icon: qingzhouUserIcon(heading),
+        zIndexOffset: 500,
+        interactive: false,
+      }).addTo(qingzhouMap);
+    } else {
+      qingzhouUserMarker.setLatLng(latLng);
+      qingzhouUserMarker.setIcon(qingzhouUserIcon(heading));
+    }
+  }
+
+  function startQingzhouLocationWatch() {
+    const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 };
+    const onSuccess = (pos) => {
+      const [lat, lng] = qingzhouToGcj(pos.coords.latitude, pos.coords.longitude);
+      updateQingzhouUserMarker([lat, lng], qingzhouUserHeading);
+      qingzhouMap.setView([lat, lng], Math.max(qingzhouMap.getZoom(), 16));
+    };
+    const onError = (err) => {
+      if (err && err.code === err.PERMISSION_DENIED) {
+        toast('定位失败，请检查浏览器权限');
+      } else {
+        toast('定位失败，请到空旷处重试');
+      }
+    };
+    qingzhouLocationWatching = true;
+    qingzhouWatchId = navigator.geolocation.watchPosition(onSuccess, onError, options);
+  }
+
+  function stopQingzhouLocationWatch() {
+    if (qingzhouWatchId !== null) {
+      navigator.geolocation.clearWatch(qingzhouWatchId);
+      qingzhouWatchId = null;
+    }
+    qingzhouLocationWatching = false;
+    if (qingzhouUserMarker) {
+      qingzhouMap.removeLayer(qingzhouUserMarker);
+      qingzhouUserMarker = null;
+    }
+  }
+
+  /* 陀螺仪方向（罗盘） */
+  function updateQingzhouCompass(heading) {
+    const arrow = $('#qingzhouCompassArrow');
+    const deg = $('#qingzhouCompassDeg');
+    if (arrow) arrow.style.transform = 'rotate(' + heading + 'deg)';
+    if (deg) deg.textContent = Math.round(heading) + '°';
+  }
+
+  function onQingzhouOrientation(e) {
+    // iOS Safari: webkitCompassHeading；Android/标准: deviceorientationabsolute
+    let heading = -1;
+    if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
+      heading = e.webkitCompassHeading;
+    } else if (typeof e.alpha === 'number' && e.absolute === true) {
+      heading = e.alpha;
+    }
+    if (heading < 0 || heading > 360) return;
+    qingzhouUserHeading = heading;
+    updateQingzhouCompass(heading);
+    if (qingzhouUserMarker) qingzhouUserMarker.setIcon(qingzhouUserIcon(heading));
+  }
+
+  function initQingzhouCompass() {
+    if (qingzhouCompassInited) return;
+    qingzhouCompassInited = true;
+    if (window.DeviceOrientationEvent) {
+      // iOS 13+ 需要用户手势触发才能获取方向数据
+      if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+        window.DeviceOrientationEvent.requestPermission()
+          .then((res) => {
+            if (res === 'granted') {
+              window.addEventListener('deviceorientationabsolute', onQingzhouOrientation, true);
+              window.addEventListener('deviceorientation', onQingzhouOrientation, true);
+            }
+          })
+          .catch(() => {});
+      } else {
+        window.addEventListener('deviceorientationabsolute', onQingzhouOrientation, true);
+        window.addEventListener('deviceorientation', onQingzhouOrientation, true);
+      }
+    } else {
+      const arrow = $('#qingzhouCompassArrow');
+      const deg = $('#qingzhouCompassDeg');
+      if (arrow) arrow.style.opacity = '.35';
+      if (deg) deg.textContent = '无';
+    }
+  }
+
+  function initQingzhouMap() {
+    qingzhouMap = L.map('qingzhouMap', { zoomControl: false, attributionControl: true });
+    qingzhouMap.setView(QINGZHOU_MAP_CONFIG.center, QINGZHOU_MAP_CONFIG.zoom);
+    L.control.zoom({ position: 'bottomleft' }).addTo(qingzhouMap);
+    L.tileLayer('https://rt{s}.map.gtimg.com/tile?z={z}&x={x}&y={y}&type=vector&styleid=0', {
+      tms: true,
+      subdomains: '0123',
+      maxZoom: 20,
+      minZoom: 3,
+      attribution: '© 腾讯地图',
+    }).addTo(qingzhouMap);
+
+    qingzhouMapOverlay = L.imageOverlay(
+      QINGZHOU_MAP_CONFIG.overlay.image,
+      QINGZHOU_MAP_CONFIG.overlay.bounds,
+      { opacity: 1, interactive: false }
+    ).addTo(qingzhouMap);
+
+    qingzhouMapRoute = L.polyline(QINGZHOU_GUIDE_ROUTE, {
+      color: '#ef4444',
+      weight: 4,
+      opacity: 0.9,
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(qingzhouMap);
+    qingzhouMapRouteArrows = QINGZHOU_GUIDE_ROUTE.slice(0, -1).map((point, index) => {
+      const nextPoint = QINGZHOU_GUIDE_ROUTE[index + 1];
+      const midpoint = [(point[0] + nextPoint[0]) / 2, (point[1] + nextPoint[1]) / 2];
+      const angle = qingzhouRouteBearing(point, nextPoint) - 90;
+      return L.marker(midpoint, {
+        icon: L.divIcon({
+          className: 'qingzhou-route-arrow-icon',
+          html: '<span style="transform: rotate(' + angle + 'deg)">➤</span>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        }),
+        interactive: false,
+      }).addTo(qingzhouMap);
+    });
+    qingzhouMapRouteMarkers = QINGZHOU_GUIDE_ROUTE.map((point, index) => L.circleMarker(point, {
+      radius: index === 0 || index === QINGZHOU_GUIDE_ROUTE.length - 1 ? 5 : 2.5,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#ef4444',
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(qingzhouMap));
+
+    qingzhouMapMarker = L.marker(QINGZHOU_MAP_CONFIG.center).addTo(qingzhouMap);
+
+    $('#qingzhouMapRestoreBtn').addEventListener('click', () => {
+      qingzhouMap.setView(QINGZHOU_MAP_CONFIG.center, QINGZHOU_MAP_CONFIG.zoom);
+    });
+    $('#qingzhouMapLocationBtn').addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        toast('当前浏览器不支持定位');
+        return;
+      }
+      // 点击再次触发：停止监听并清除用户 marker
+      if (qingzhouLocationWatching) {
+        stopQingzhouLocationWatch();
+        toast('已停止定位跟随');
+        return;
+      }
+      startQingzhouLocationWatch();
+    });
+    $('#qingzhouMapLayerToggle').addEventListener('click', (e) => {
+      qingzhouMapOverlayVisible = !qingzhouMapOverlayVisible;
+      if (qingzhouMapOverlay) qingzhouMapOverlay.setOpacity(qingzhouMapOverlayVisible ? 1 : 0);
+      e.currentTarget.textContent = qingzhouMapOverlayVisible ? '隐藏贴图' : '显示贴图';
+    });
+    $('#qingzhouMapExchangeBtn').addEventListener('click', () => {
+      const input = $('#qingzhouMapEndInput');
+      const value = input.value;
+      input.value = value ? '当前位置' : '';
+      input.placeholder = value ? '请选择终点' : '当前位置';
+    });
+    $('#qingzhouMapRouteBtn').addEventListener('click', () => {
+      if (qingzhouMapRoute) qingzhouMap.fitBounds(qingzhouMapRoute.getBounds(), { padding: [40, 40] });
+    });
+    initQingzhouCompass();
+    setTimeout(() => { if (qingzhouMap) qingzhouMap.invalidateSize(); }, 60);
+  }
 
   function onMapShow() {
     if (!state.mapInited) {
@@ -403,7 +740,7 @@
     map = L.map('leafletMap', { zoomControl: false, attributionControl: true });
     map.setView([MAP.latitude, MAP.longitude], MAP.scale || 16);
 
-    baseLayer = L.tileLayer('https://rt{s}.map.gtimg.com/tile?z={z}&x={x}&y={y}&type=vector&styleid=3', {
+    baseLayer = L.tileLayer('https://rt{s}.map.gtimg.com/tile?z={z}&x={x}&y={y}&type=vector&styleid=0', {
       tms: true,
       subdomains: '0123',
       maxZoom: 20,
@@ -482,14 +819,14 @@
           const element = this.getElement();
           if (!element) return;
           element.style.transformOrigin = '100% 100%';
-          element.style.transform = element.style.transform.replace(/\s*rotate\([^)]*\)/g, '') + ' rotate(5deg)';
+          element.style.transform = element.style.transform.replace(/\s*rotate\([^)]*\)/g, '') + ' rotate(0deg)';
         };
         overlay._reset();
         groundOverlay = overlay;
       };
       image.onload = () => {
         const centerLatitude = (b.north + b.south) / 2;
-        const imageScale = 0.55;
+        const imageScale = 0.54;
         const latitudeSpan = (b.north - b.south) * imageScale;
         const imageRatio = image.naturalWidth / image.naturalHeight;
         const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
@@ -523,7 +860,7 @@
     if (loc) markers.push(formMarker(loc, 'location', -1));
     cat.list.forEach((site, i) => {
       const isCurrent = loc && Math.abs(Number(site.latitude) - Number(loc.latitude)) < 0.000001 && Math.abs(Number(site.longitude) - Number(loc.longitude)) < 0.000001;
-      if (!isCurrent) markers.push(formMarker(site, 'site', i + 1, tone));
+      if (!isCurrent) markers.push(formMarker(site, 'site', i + 1, tone, cat.name));
     });
     fitMarkers(markers);
   }
@@ -540,7 +877,7 @@
     return tones[category.id] || 'main';
   }
 
-  function formMarker(site, type, id, tone) {
+  function formMarker(site, type, id, tone, categoryName) {
     const label = type === 'location' ? '当前位置' : site.name;
     const toneClass = type === 'site' && tone ? ' tone-' + tone : '';
     const icon = L.divIcon({
@@ -552,12 +889,14 @@
     const layer = L.marker([site.latitude, site.longitude], { icon });
     layer.addTo(markerLayer);
     layer.on('click', () => {
-      if (!state.route.polyline) openMapSiteDialog(site);
+      if (type === 'site' && !state.route.polyline) openGuideDialog(site, categoryName);
     });
     return { layer, site, id };
   }
 
-  function speakSite(site, button) {
+  function speakSite(site, button, overrideText) {
+    const IDLE_HTML = '<span class="voice-play">▶</span><span class="voice-label">开始讲解</span><span class="voice-en">VOICE GUIDE</span>';
+    const PLAY_HTML = '<span class="voice-play">■</span><span class="voice-label">停止讲解</span><span class="voice-en">VOICE GUIDE</span>';
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
       toast('当前浏览器暂不支持语音讲解');
       return;
@@ -566,23 +905,23 @@
       window.speechSynthesis.cancel();
       if (button) {
         button.classList.remove('playing');
-        button.innerHTML = '<span>▶</span>语音讲解';
+        button.innerHTML = IDLE_HTML;
       }
       return;
     }
-    const text = [site.name, site.aliases, site.desc].filter(Boolean).join('。');
+    const text = overrideText || [site.name, site.aliases, site.desc].filter(Boolean).join('。');
     const utterance = new SpeechSynthesisUtterance(text || site.name);
     utterance.lang = 'zh-CN';
     utterance.rate = 0.92;
     utterance.pitch = 1;
     if (button) {
       button.classList.add('playing');
-      button.innerHTML = '<span>■</span>停止讲解';
+      button.innerHTML = PLAY_HTML;
     }
     const reset = () => {
       if (!button) return;
       button.classList.remove('playing');
-      button.innerHTML = '<span>▶</span>语音讲解';
+      button.innerHTML = IDLE_HTML;
     };
     utterance.onend = reset;
     utterance.onerror = reset;
@@ -590,20 +929,49 @@
     window.speechSynthesis.speak(utterance);
   }
 
-  function openMapSiteDialog(site) {
-    const body =
-      '<div class="site-modal-kicker">LOCATION GUIDE</div>' +
-      '<div class="site-modal-title">' + esc(site.name) + '</div>' +
-      '<div class="site-modal-alias">' + esc(site.aliases || '厂区地点') + '</div>' +
-      '<div class="site-modal-desc">' + esc(site.desc || '暂无详细介绍') + '</div>' +
-      '<button class="voice-btn" id="siteVoiceBtn" type="button"><span>▶</span>语音讲解</button>';
-    openModal(esc(site.name), body, [
-      { text: '设为起点', onClick: () => { state.start = { name: site.name, latitude: site.latitude, longitude: site.longitude }; syncMapInputs(); renderCategoryMarkers(); } },
-      { text: '设为终点', onClick: () => { state.end = { name: site.name, latitude: site.latitude, longitude: site.longitude }; syncMapInputs(); } },
-      { text: '关闭' },
-    ]);
-    const voiceBtn = $('#siteVoiceBtn');
-    if (voiceBtn) voiceBtn.addEventListener('click', () => speakSite(site, voiceBtn));
+  function openGuideDialog(site, categoryName) {
+    if (!site) return;
+    const guide = AREA_GUIDES[categoryName] || AREA_GUIDES['主要地点'];
+    const stepsHtml = (guide.steps || []).map((s, i) =>
+      '<div class="explain-step"><span class="step-num">' + String(i + 1).padStart(2, '0') + '</span>' +
+      '<strong class="step-title">' + esc(s.t) + '</strong></div>'
+    ).join('<span class="step-arrow">→</span>');
+
+    $('#modalTitle').textContent = '';
+    $('#modalBox').classList.add('explain-mode');
+    $('#modalBody').innerHTML =
+      '<button class="explain-close" id="explainClose" type="button">×</button>' +
+      '<div class="explain-hero">' +
+      '<img class="explain-bg" src="' + esc(site.img) + '" alt="" />' +
+      '<div class="explain-overlay"></div>' +
+      '<div class="explain-head">' +
+      '<span class="explain-kicker">' + esc(guide.en || 'AREA') + '</span>' +
+      '<div class="explain-title">' + esc(site.name) + '</div>' +
+      '<div class="explain-subtitle">' + esc(guide.subtitle || site.aliases || '') + '</div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="explain-content">' +
+      '<p class="explain-desc">' + esc(site.desc || '暂无详细介绍') + '</p>' +
+      '<div class="explain-process-head"><span>参观重点</span><span class="process-en">PROCESS</span></div>' +
+      '<div class="explain-steps">' + stepsHtml + '</div>' +
+      '<button class="voice-btn explain-voice" id="explainVoiceBtn" type="button">' +
+      '<span class="voice-play">▶</span><span class="voice-label">开始讲解</span><span class="voice-en">VOICE GUIDE</span>' +
+      '</button>' +
+      '</div>';
+    $('#modalFooter').innerHTML = '';
+    $('#modalMask').classList.add('show');
+
+    $('#explainClose').addEventListener('click', hideModal);
+    const voiceBtn = $('#explainVoiceBtn');
+    if (voiceBtn) {
+      const guideText = [
+        site.name,
+        guide.subtitle,
+        site.desc,
+        '参观重点：' + (guide.steps || []).map((s, i) => (i + 1) + '. ' + s.t + '，' + s.d).join('；')
+      ].filter(Boolean).join('。');
+      voiceBtn.addEventListener('click', () => speakSite(site, voiceBtn, guideText));
+    }
   }
 
   function fitMarkers(markers) {
@@ -675,6 +1043,7 @@
       if (def) state.start = { name: def.name, latitude: def.latitude, longitude: def.longitude };
       syncMapInputs();
       renderCategoryMarkers();
+      toast('设备不支持定位，默认位置设为' + (def ? def.name : '默认点'), 2000);
     }
   }
 
@@ -1027,7 +1396,7 @@
       '<div class="instruction-txt">&emsp;&emsp;“地点汇总”页展示了各地点类型的地点，可切换地点类型查看。点击可以查看地点介绍，设置为起点或终点并跳转到地图。</div>' +
       '<button class="instruction-btn" id="instrSite">去“地点汇总”页</button>' +
       '<div class="instruction-txt">&emsp;&emsp;“地图”页展示了厂区地图，可以在地图上选择地点或者搜索地点进行导航。</div>' +
-      '<div class="instruction-row top"><div class="k">定位</div><div class="v">点击定位图标可以重新定位<br/>若不在学校，设置 ' + esc(name || '默认地点') + ' 为起点</div></div>' +
+      '<div class="instruction-row top"><div class="k">定位</div><div class="v">点击定位图标可以重新定位<br/>若不在厂区，设置 ' + esc(name || '默认地点') + ' 为起点</div></div>' +
       '<div class="instruction-row"><div class="k">搜索</div><div class="v">点击搜索栏起点 / 终点输入框<br/>即可跳转到对应搜索页</div></div>' +
       '<div class="instruction-row"><div class="k">点击</div><div class="v">地点类型栏可以滑动点击<br/>点击地点可查看信息，并设为起点/终点<br/>点击底部可查看当前地点类型地点或路线信息</div></div>' +
       '<div class="instruction-row"><div class="k">导航</div><div class="v">点击路线按钮即可进行导航<br/>点击切换图标即可对调起点和终点</div></div>' +
@@ -1054,8 +1423,8 @@
 
   function renderPano() {
     const panos = [
-      { name: '至善广场', src: 'https://s2.loli.net/2024/04/22/EpTcHMbmCiNGosP.jpg', info: { title: '至善广场', content: '这里有宽宽的大阶梯，是拍集体照的好地方' } },
-      { name: '田径场', src: 'https://s2.loli.net/2024/04/22/7wIgFSJb1tQYEv6.jpg', info: { title: '田径场', content: '学生运动的好去处' } },
+      { name: '厂区总览', src: asset(MEDIA.map_bottom), info: { title: '厂区总览', content: '安徽英科医疗厂区整体示意图，涵盖生产车间、仓储与生活配套区域。' } },
+      { name: '厂区主入口', src: asset(MEDIA.map_bottom), info: { title: '厂区主入口', content: '厂区主出入口（工厂大门），来访车辆与人员由此进出。' } },
     ];
     let idx = state.panoIndex;
     $('#panoBody').innerHTML =

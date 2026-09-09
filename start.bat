@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-echo 正在启动桂院校园导航网页版...
+echo 正在启动安徽英科医疗厂区导航网页版...
 start "GLU-Guide-Server" node server.js
 timeout /t 2 /nobreak >nul
 start "" http://localhost:8000

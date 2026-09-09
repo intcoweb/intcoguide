@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#0b2a45" />
   <title>安徽英科医疗导航</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" />
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -66,17 +69,76 @@
       <div class="map-bottom hidden" id="mapBottomBtn"></div>
     </section>
 
+    <!-- ======================= 青州地图模块（可整段删除） ======================= -->
+    <section class="page page-qingzhou-map" id="page-qingzhou-map">
+      <div class="map-top-card qingzhou-map-top-card">
+        <div class="map-top-left">
+          <div class="map-field up">
+            <span class="dot start"></span>
+            <input class="map-input" value="" placeholder="当前位置" readonly />
+          </div>
+          <div class="map-field">
+            <span class="dot end"></span>
+            <input class="map-input" id="qingzhouMapEndInput" placeholder="请选择终点" readonly />
+          </div>
+        </div>
+        <div class="map-top-middle">
+          <button class="map-exchange" id="qingzhouMapExchangeBtn" title="对调起点/终点">
+            <img src="https://lbs.gtimg.com/visual/miniprogram-plugin/route-planning/assets/exchange.png" alt="交换" />
+          </button>
+        </div>
+        <div class="map-top-right">
+          <button class="map-route-btn" id="qingzhouMapRouteBtn">路线</button>
+        </div>
+      </div>
+
+      <div class="map-control qingzhou-map-control">
+        <div class="map-campus-wrap">
+          <button class="picker" type="button">地图</button>
+        </div>
+      </div>
+
+      <div id="qingzhouMap"></div>
+
+      <div class="map-right-tools qingzhou-map-tools">
+        <div class="location" id="qingzhouMapRestoreBtn" title="还原">
+          <img src="assets/images/restore.png" alt="还原" />
+        </div>
+        <div class="location" id="qingzhouMapLocationBtn" title="定位">
+          <img src="assets/images/location.png" alt="定位" />
+        </div>
+        <button class="map-layer-toggle" id="qingzhouMapLayerToggle" title="显示或隐藏厂区贴图">隐藏贴图</button>
+      </div>
+
+      <!-- 青州罗盘（陀螺仪方向指示） -->
+      <div class="qingzhou-compass" id="qingzhouCompass" title="陀螺仪方向">
+        <div class="qingzhou-compass-arrow" id="qingzhouCompassArrow">▲</div>
+        <div class="qingzhou-compass-deg" id="qingzhouCompassDeg">--°</div>
+      </div>
+    </section>
+
     <!-- ======================= 地点汇总 Tab ======================= -->
     <section class="page page-site" id="page-site">
-      <div class="site-campus" id="siteCampusWrap">
-        <button class="picker" id="siteCampusBtn"></button>
+      <div class="site-head">
+        <div class="site-head-bg"></div>
+        <div class="site-head-content">
+          <div class="site-head-meta">
+            <span class="site-eyebrow">FACILITY DIRECTORY</span>
+            <h1 class="site-head-title">厂区点位导航</h1>
+            <p class="site-head-sub">按分类浏览厂区全部设施</p>
+          </div>
+          <div class="site-campus" id="siteCampusWrap">
+            <button class="picker" id="siteCampusBtn"></button>
+          </div>
+        </div>
       </div>
       <div class="site-body">
         <div class="site-left" id="siteLeft"></div>
         <div class="site-right">
           <div class="site-title">
             <img id="siteTitleIcon" src="assets/images/tag.png" alt="" />
-            <span id="siteTitleText"></span>
+            <span class="site-title-name" id="siteTitleText"></span>
+            <span class="site-title-count" id="siteTitleCount"></span>
           </div>
           <div class="site-content" id="siteContent"></div>
         </div>
@@ -85,30 +147,39 @@
 
     <!-- ======================= 首页 Tab ======================= -->
     <section class="page page-home" id="page-home">
-      <section class="home-weather-panel" aria-label="厂区天气">
+      <div class="home-hero">
+        <div class="hero-bg"></div>
+        <span class="hero-orb orb-a"></span>
+        <span class="hero-orb orb-b"></span>
+        <span class="hero-orb orb-c"></span>
+        <div class="hero-shine"></div>
+        <div class="hero-top">
+          <span class="hero-eyebrow"><i></i>INTCO MEDICAL · 智慧园区</span>
+          <button class="hero-link" id="homeLabel" type="button"><i></i><span>厂区简介</span></button>
+        </div>
+        <h1 class="home-school-name" id="homeSchoolName"></h1>
+        <div class="home-english" id="homeEnglish"></div>
+        <div class="hero-tags" id="homeTags"></div>
+        <div class="hero-quote" id="homeMotto"></div>
+      </div>
+
+      <section class="home-weather-panel" aria-label="园区天气">
         <div class="weather-panel-head">
           <div>
             <span class="weather-title-kicker">实时环境</span>
-            <h2>厂区天气</h2>
+            <h2>园区天气</h2>
           </div>
           <span class="weather-live"><i></i>实时更新</span>
         </div>
         <div class="weather-card" id="weatherCard"></div>
       </section>
 
-      <div class="home-hero">
-        <div class="home-hero-label" id="homeLabel"></div>
-        <div class="home-school-name" id="homeSchoolName"></div>
-      </div>
-
-      <div class="home-motto" id="homeMotto"></div>
-
       <div class="home-info" id="homeInfo"></div>
 
       <div class="home-banner" id="homeBanner"></div>
 
       <div class="home-card">
-        <div class="home-card-title">🚩 常用功能</div>
+        <div class="home-card-title"><span class="title-ic">⚡</span>常用功能</div>
         <div class="home-functions" id="homeFunctions"></div>
       </div>
 
@@ -154,6 +225,10 @@
     <nav class="tabbar" id="tabbar">
       <a class="tab-item" data-route="#/map">
         <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="地图" /><span>地图</span>
+      </a>
+      <!-- 青州地图入口（可与上方青州地图模块一起删除） -->
+      <a class="tab-item" data-route="#/qingzhou-map">
+        <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="青州地图" /><span>青州地图</span>
       </a>
       <a class="tab-item" data-route="#/site">
         <img class="tab-icon" src="assets/images/tabbar/icon_collection.png" data-alt="assets/images/tabbar/icon_collection_HL.png" alt="地点汇总" /><span>地点汇总</span>

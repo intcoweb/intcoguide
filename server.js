@@ -1,9 +1,3 @@
-/* 桂院校园导航 · 网页复刻版
-   本地静态服务器 + 代理接口
-   - 将 /api/weather 代理到和风天气（解决跨域）
-   - 将 /api/route 代理到腾讯位置服务方向 API（解决跨域与额度时降级）
-   用法：node server.js  然后访问 http://localhost:8000
-*/
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -81,4 +75,4 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => console.log('桂院校园导航网页版已启动: http://localhost:' + PORT));
+server.listen(PORT, () => console.log('安徽英科医疗厂区导航已启动: http://localhost:' + PORT));
