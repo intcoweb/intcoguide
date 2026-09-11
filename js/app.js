@@ -14,7 +14,7 @@
     center: [36.76472325, 118.38438492],
     zoom: 16,
     overlay: {
-      image: 'assets/images/qingzhou-intco-old-map.svg?v=20260829-5',
+      image: 'assets/images/qingzhou-intco-old-map.png?v=20260909-2',
       bounds: [[36.75901813, 118.3804614], [36.76873218, 118.3881691]],
     },
   };
@@ -499,6 +499,8 @@
   let markerLayer = null;
   let routeLayer = null;
   let overlayToken = 0;
+  let pointsTextLayers = [];
+  const SVG_NS = 'http://www.w3.org/2000/svg';
 
   /* 青州地图模块（可整段删除） */
   let qingzhouMap = null;
@@ -509,10 +511,12 @@
   let qingzhouMapRouteArrows = [];
   let qingzhouMapOverlayVisible = true;
   let qingzhouUserMarker = null;      // 用户当前位置 marker
-  let qingzhouWatchId = null;         // watchPosition 句柄
   let qingzhouUserHeading = -1;       // 陀螺仪朝向（度，-1 表示未知）
   let qingzhouLocationWatching = false;
+  let qingzhouFirstFixToast = false; // 首次定位成功的提示是否已展示
   let qingzhouCompassInited = false;
+  let qingzhouHeadingReceived = false;  // 是否收到过朝向数据
+  let qingzhouHeadingTimer = null;      // 方向数据超时计时器
 
   function qingzhouRouteBearing(start, end) {
     const latitude = ((start[0] + end[0]) / 2) * Math.PI / 180;
@@ -528,13 +532,11 @@
     }
   }
 
-  /* 用户位置 marker（带朝向箭头） */
-  function qingzhouUserIcon(heading) {
-    // 箭头为 CSS 三角形，默认朝北（0°），直接按朝向角度旋转
-    const deg = (typeof heading === 'number' && heading >= 0) ? heading : 0;
+  /* 用户位置 marker（纯蓝点，不带朝向箭头） */
+  function qingzhouUserIcon() {
     return L.divIcon({
       className: 'qingzhou-user-marker-icon',
-      html: '<div class="user-heading" style="--heading:' + deg + 'deg"></div><div class="user-dot"></div>',
+      html: '<div class="user-dot"></div>',
       iconSize: [26, 26],
       iconAnchor: [13, 13],
     });
@@ -546,17 +548,30 @@
     return [g.lat, g.lng];
   }
 
-  function updateQingzhouUserMarker(latLng, heading) {
+  function updateQingzhouUserMarker(latLng) {
     if (!qingzhouMap) return;
     if (!qingzhouUserMarker) {
       qingzhouUserMarker = L.marker(latLng, {
-        icon: qingzhouUserIcon(heading),
+        icon: qingzhouUserIcon(),
         zIndexOffset: 500,
         interactive: false,
       }).addTo(qingzhouMap);
     } else {
       qingzhouUserMarker.setLatLng(latLng);
-      qingzhouUserMarker.setIcon(qingzhouUserIcon(heading));
+    }
+  }
+
+  // 把地图移动到用户当前位置并居中（用于首次定位与刷新定位）
+  function qingzhouLocateAndCenter(lat, lng) {
+    updateQingzhouUserMarker([lat, lng]);
+    if (qingzhouMap) qingzhouMap.setView([lat, lng], Math.max(qingzhouMap.getZoom(), 16));
+  }
+
+  function qingzhouHandleLocError(err) {
+    if (err && err.code === err.PERMISSION_DENIED) {
+      qingzhouPermissionHint('定位');
+    } else {
+      toast('定位失败，请到空旷处重试');
     }
   }
 
@@ -564,29 +579,25 @@
     const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 };
     const onSuccess = (pos) => {
       const [lat, lng] = qingzhouToGcj(pos.coords.latitude, pos.coords.longitude);
-      updateQingzhouUserMarker([lat, lng], qingzhouUserHeading);
-      qingzhouMap.setView([lat, lng], Math.max(qingzhouMap.getZoom(), 16));
-    };
-    const onError = (err) => {
-      if (err && err.code === err.PERMISSION_DENIED) {
-        toast('定位失败，请检查浏览器权限');
-      } else {
-        toast('定位失败，请到空旷处重试');
+      // watchPosition 持续跟随：只更新蓝点位置，不再自动居中地图，避免干扰浏览
+      updateQingzhouUserMarker([lat, lng]);
+      if (!qingzhouFirstFixToast) {
+        qingzhouFirstFixToast = true;
+        qingzhouLocateAndCenter(lat, lng); // 仅首次定位成功时居中一次
+        toast('已定位到当前位置', 1200);
       }
     };
+    const onError = (err) => qingzhouHandleLocError(err);
     qingzhouLocationWatching = true;
-    qingzhouWatchId = navigator.geolocation.watchPosition(onSuccess, onError, options);
-  }
-
-  function stopQingzhouLocationWatch() {
-    if (qingzhouWatchId !== null) {
-      navigator.geolocation.clearWatch(qingzhouWatchId);
-      qingzhouWatchId = null;
-    }
-    qingzhouLocationWatching = false;
-    if (qingzhouUserMarker) {
-      qingzhouMap.removeLayer(qingzhouUserMarker);
-      qingzhouUserMarker = null;
+    navigator.geolocation.watchPosition(onSuccess, onError, options);
+    // 方向数据超时检测：仅非 iOS 主动授权流程（未弹过权限请求）时启用，
+    // 避免与 iOS 点击定位按钮触发的 requestPermission 弹窗重复。
+    if (window.DeviceOrientationEvent && !qingzhouHeadingReceived &&
+        typeof window.DeviceOrientationEvent.requestPermission !== 'function') {
+      clearTimeout(qingzhouHeadingTimer);
+      qingzhouHeadingTimer = setTimeout(() => {
+        if (!qingzhouHeadingReceived) qingzhouPermissionHint('方向');
+      }, 5000);
     }
   }
 
@@ -594,41 +605,65 @@
   function updateQingzhouCompass(heading) {
     const arrow = $('#qingzhouCompassArrow');
     const deg = $('#qingzhouCompassDeg');
-    if (arrow) arrow.style.transform = 'rotate(' + heading + 'deg)';
+    // 罗盘指针始终指向北方：设备朝北为 heading=0，指针反向旋转保持指北
+    if (arrow) arrow.style.transform = 'rotate(' + (-heading) + 'deg)';
     if (deg) deg.textContent = Math.round(heading) + '°';
   }
 
   function onQingzhouOrientation(e) {
-    // iOS Safari: webkitCompassHeading；Android/标准: deviceorientationabsolute
-    let heading = -1;
+    // 优先绝对朝向（真北）；拿不到时退回相对 alpha（设备初始朝向），保证指针能动
+    let heading = null;
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
       heading = e.webkitCompassHeading;
     } else if (typeof e.alpha === 'number' && e.absolute === true) {
       heading = e.alpha;
+    } else if (typeof e.alpha === 'number') {
+      heading = e.alpha;
     }
-    if (heading < 0 || heading > 360) return;
+    if (heading === null || heading < 0 || heading > 360) return;
+    qingzhouHeadingReceived = true;
+    clearTimeout(qingzhouHeadingTimer);
     qingzhouUserHeading = heading;
     updateQingzhouCompass(heading);
-    if (qingzhouUserMarker) qingzhouUserMarker.setIcon(qingzhouUserIcon(heading));
+  }
+
+  /* 权限引导弹窗 */
+  function qingzhouPermissionHint(kind) {
+    const isLoc = kind === '定位';
+    const rows = isLoc
+      ? '<div class="instruction-row"><div class="k">操作</div><div class="v">点击浏览器地址栏左侧的锁形/信息图标，选择“网站设置”</div></div>' +
+        '<div class="instruction-row"><div class="k">定位</div><div class="v">将“位置”权限设为“允许”，然后返回刷新页面</div></div>'
+      : '<div class="instruction-row"><div class="k">操作</div><div class="v">点击浏览器地址栏左侧的锁形/信息图标，选择“网站设置”</div></div>' +
+        '<div class="instruction-row"><div class="k">方向</div><div class="v">开启“运动与方向 / 方向传感器”权限，然后返回刷新页面</div></div>';
+    openModal(
+      (isLoc ? '定位权限' : '方向权限') + '未开启',
+      '<p class="explain-desc">' + (isLoc ? '无法获取当前位置，无法在地图上显示你的位置。' : '无法获取设备朝向，罗盘指针无法指示方向。') + '</p>' +
+      '<div class="instruction-txt">请按以下步骤开启：</div>' + rows,
+      [{ text: '知道了' }]
+    );
   }
 
   function initQingzhouCompass() {
     if (qingzhouCompassInited) return;
     qingzhouCompassInited = true;
     if (window.DeviceOrientationEvent) {
-      // iOS 13+ 需要用户手势触发才能获取方向数据
-      if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-        window.DeviceOrientationEvent.requestPermission()
-          .then((res) => {
-            if (res === 'granted') {
-              window.addEventListener('deviceorientationabsolute', onQingzhouOrientation, true);
-              window.addEventListener('deviceorientation', onQingzhouOrientation, true);
-            }
-          })
-          .catch(() => {});
-      } else {
+      const attach = () => {
         window.addEventListener('deviceorientationabsolute', onQingzhouOrientation, true);
         window.addEventListener('deviceorientation', onQingzhouOrientation, true);
+      };
+      // iOS 13+ 需要用户手势才能获取方向数据，把权限请求挂到定位按钮点击
+      if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+        const btn = $('#qingzhouMapLocationBtn');
+        if (btn) btn.addEventListener('click', () => {
+          window.DeviceOrientationEvent.requestPermission()
+            .then((res) => {
+              if (res === 'granted') attach();
+              else qingzhouPermissionHint('方向');
+            })
+            .catch(() => qingzhouPermissionHint('方向'));
+        }, { once: true });
+      } else {
+        attach();
       }
     } else {
       const arrow = $('#qingzhouCompassArrow');
@@ -653,7 +688,7 @@
     qingzhouMapOverlay = L.imageOverlay(
       QINGZHOU_MAP_CONFIG.overlay.image,
       QINGZHOU_MAP_CONFIG.overlay.bounds,
-      { opacity: 1, interactive: false }
+      { opacity: 1, interactive: false, className: 'qingzhou-map-overlay' }
     ).addTo(qingzhouMap);
 
     qingzhouMapRoute = L.polyline(QINGZHOU_GUIDE_ROUTE, {
@@ -696,10 +731,18 @@
         toast('当前浏览器不支持定位');
         return;
       }
-      // 点击再次触发：停止监听并清除用户 marker
+      toast('正在获取位置…');
+      // 已在跟随：重新获取一次当前位置并居中，不停止定位跟随
       if (qingzhouLocationWatching) {
-        stopQingzhouLocationWatch();
-        toast('已停止定位跟随');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const [lat, lng] = qingzhouToGcj(pos.coords.latitude, pos.coords.longitude);
+            qingzhouLocateAndCenter(lat, lng);
+            toast('已定位到当前位置', 1200);
+          },
+          (err) => qingzhouHandleLocError(err),
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
+        );
         return;
       }
       startQingzhouLocationWatch();
@@ -738,6 +781,8 @@
     state.mapDefaultPoint = defaultPointOf(MAP.site_data[state.choose]);
 
     map = L.map('leafletMap', { zoomControl: false, attributionControl: true });
+    map.createPane('pointsPane');
+    map.getPane('pointsPane').style.zIndex = 500;
     map.setView([MAP.latitude, MAP.longitude], MAP.scale || 16);
 
     baseLayer = L.tileLayer('https://rt{s}.map.gtimg.com/tile?z={z}&x={x}&y={y}&type=vector&styleid=0', {
@@ -801,51 +846,215 @@
     hideRouteUI();
   }
 
+  // 厂区示意图绕范围中心旋转。rotation 为正时顺时针，单位：度。
+  function createCampusImageOverlay(url, bounds, options) {
+    const rotation = Number(options && options.rotation);
+    if (!Number.isFinite(rotation) || rotation === 0) {
+      return L.imageOverlay(url, bounds, options);
+    }
+
+    const Overlay = L.ImageOverlay.extend({
+      _reset: function () {
+        L.ImageOverlay.prototype._reset.call(this);
+        this._syncRotation();
+      },
+      _animateZoom: function (e) {
+        if (typeof L.ImageOverlay.prototype._animateZoom === 'function') {
+          L.ImageOverlay.prototype._animateZoom.call(this, e);
+        }
+        this._syncRotation();
+      },
+      _syncRotation: function () {
+        const img = this._image;
+        const deg = Number(this.options.rotation);
+        if (!img || !Number.isFinite(deg) || deg === 0) return;
+        img.style.transformOrigin = 'center center';
+        const base = (img.style.transform || '').replace(/\s*rotate\(-?[\d.]+deg\)/gi, '');
+        img.style.transform = base + ' rotate(' + deg + 'deg)';
+      },
+    });
+
+    return new Overlay(url, bounds, Object.assign({}, options, { rotation: rotation }));
+  }
+
   function renderCampusOverlay() {
     const campus = currentCampus();
+    clearPointsTextLayers();
     if (groundOverlay) { map.removeLayer(groundOverlay); groundOverlay = null; }
     if (polygonLayer) { map.removeLayer(polygonLayer); polygonLayer = null; }
+
+    const polygons = [];
+    const labelSpecs = [];
+    // 用户在各 POI 条目里填写的 points 区域（依次连线围成多边形）
+    addCategoryPolygons(campus, polygons, labelSpecs);
+
     // 默认叠加厂区示意图；右上角可切换真实底图和厂区边界。
     if (state.showMapImg && campus.isUseMapImg && campus.img && campus.bounds) {
       const b = campus.bounds;
-      const token = ++overlayToken;
-      const image = new Image();
-      const addOverlay = (bounds) => {
-        if (token !== overlayToken || !state.showMapImg) return;
-        const overlay = L.imageOverlay(campus.img, bounds, { opacity: b.opacity || 0.8 }).addTo(map);
-        const resetOverlay = overlay._reset.bind(overlay);
-        overlay._reset = function () {
-          resetOverlay();
-          const element = this.getElement();
-          if (!element) return;
-          element.style.transformOrigin = '100% 100%';
-          element.style.transform = element.style.transform.replace(/\s*rotate\([^)]*\)/g, '') + ' rotate(0deg)';
-        };
-        overlay._reset();
-        groundOverlay = overlay;
-      };
-      image.onload = () => {
-        const centerLatitude = (b.north + b.south) / 2;
-        const imageScale = 0.54;
-        const latitudeSpan = (b.north - b.south) * imageScale;
-        const imageRatio = image.naturalWidth / image.naturalHeight;
-        const longitudeSpan = latitudeSpan * imageRatio / Math.cos(centerLatitude * Math.PI / 180);
-        const imageOffset = { latitude: 0.00022, longitude: 0.00038 };
-        const adjustedCenterLatitude = centerLatitude + imageOffset.latitude;
-        const centerLongitude = (b.east + b.west) / 2 + imageOffset.longitude;
-        addOverlay([
-          [adjustedCenterLatitude - latitudeSpan / 2, centerLongitude - longitudeSpan / 2],
-          [adjustedCenterLatitude + latitudeSpan / 2, centerLongitude + longitudeSpan / 2],
-        ]);
-      };
-      image.onerror = () => addOverlay([[b.south, b.west], [b.north, b.east]]);
-      image.src = campus.img;
+      overlayToken += 1;
+      groundOverlay = createCampusImageOverlay(campus.img, [[b.south, b.west], [b.north, b.east]], {
+        opacity: b.opacity || 1,
+        rotation: campus.rotation,
+        interactive: false,
+        className: 'campus-map-overlay',
+      }).addTo(map);
     } else if (campus.range && campus.range.length) {
       overlayToken += 1;
-      polygonLayer = L.polygon(campus.range.map((p) => [p.latitude, p.longitude]), {
-        color: '#789cff', weight: 2, fillColor: '#d5dff2', fillOpacity: 0.2,
-      }).addTo(map);
+      polygons.push(L.polygon(campus.range.map((p) => [p.latitude, p.longitude]), {
+        color: '#789cff', weight: 2, fillColor: '#d5dff2', fillOpacity: 0.2, interactive: false,
+      }));
     }
+
+    if (polygons.length) {
+      polygonLayer = (polygons.length === 1) ? polygons[0] : L.layerGroup(polygons);
+      polygonLayer.addTo(map);
+    }
+    // 文字标签放在多边形之上，随缩放自适应并在框内显示
+    labelSpecs.forEach((spec) => addPointsLabelToPolygon(spec.poly, spec.item, spec.style));
+  }
+
+  function addCategoryPolygons(campus, out, labelSpecs) {
+    const cats = campus.category_list || [];
+    cats.forEach((cat) => {
+      const catStyle = (cat.polygon && typeof cat.polygon === 'object') ? cat.polygon : {};
+      (cat.list || []).forEach((item) => {
+        const latlngs = pointsToLatLngs(item.points);
+        if (!latlngs) return;
+        const itemStyle = (item.polygon && typeof item.polygon === 'object') ? item.polygon : {};
+        const style = Object.assign(
+          { color: '#ff8c3a', weight: 2.5, fillColor: '#ffb14e', fillOpacity: 0.25 },
+          catStyle, itemStyle
+        );
+        const poly = L.polygon(latlngs, {
+          color: style.color, weight: style.weight, fillColor: style.fillColor,
+          fillOpacity: style.fillOpacity, interactive: false, pane: 'pointsPane',
+        });
+        if (labelSpecs) labelSpecs.push({ poly: poly, item: item, style: style });
+        out.push(poly);
+      });
+    });
+  }
+
+  function pointsLabelLines(item) {
+    const name = item.name ? String(item.name).trim() : '';
+    const alias = (item.aliases && String(item.aliases).trim() !== name) ? String(item.aliases).trim() : '';
+    const lines = [];
+    if (name) lines.push(name);
+    if (alias) lines.push(alias);
+    return lines;
+  }
+
+  function charUnits(str) {
+    let u = 0;
+    for (const ch of String(str)) {
+      u += (/[\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef]/.test(ch)) ? 1 : 0.58;
+    }
+    return u;
+  }
+
+  function addPointsLabelToPolygon(poly, item, style) {
+    const lines = pointsLabelLines(item);
+    if (!lines.length || !map) return;
+    const anchor = poly.getCenter ? poly.getCenter() : poly.getBounds().getCenter();
+    const renderer = map.getRenderer(poly);
+    if (!renderer || !renderer._container) return;
+
+    const textColor = style.textColor || '#1a1a1a';
+    const maxFont = Number(style.textSize) || 16;
+
+    const svg = renderer._container;
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'points-text-layer');
+    g.setAttribute('style', 'pointer-events:none;');
+    const textEl = document.createElementNS(SVG_NS, 'text');
+    textEl.setAttribute('text-anchor', 'middle');
+    textEl.setAttribute('dominant-baseline', 'central');
+    textEl.setAttribute('fill', textColor);
+    const tspans = lines.map((ln) => {
+      const t = document.createElementNS(SVG_NS, 'tspan');
+      t.setAttribute('x', '0');
+      t.textContent = ln;
+      textEl.appendChild(t);
+      return t;
+    });
+    g.appendChild(textEl);
+    svg.appendChild(g);
+
+    const obj = { element: g, update: null, remove: null };
+
+    function update() {
+      const bounds = poly.getBounds();
+      const nw = map.latLngToLayerPoint(bounds.getNorthWest());
+      const se = map.latLngToLayerPoint(bounds.getSouthEast());
+      const w = Math.abs(se.x - nw.x);
+      const h = Math.abs(se.y - nw.y);
+      const c = map.latLngToLayerPoint(anchor);
+      const maxLineUnits = Math.max.apply(null, lines.map(charUnits));
+      const lineCount = lines.length;
+      const lineRatio = 1.3;
+      const availW = w * 0.86;
+      const availH = h * 0.8;
+      const byW = availW / Math.max(maxLineUnits, 0.1);
+      const byH = availH / (lineCount * lineRatio);
+      let fontSize = Math.min(maxFont, byW, byH);
+      if (fontSize < 4) { g.setAttribute('visibility', 'hidden'); return; }
+      g.setAttribute('visibility', 'visible');
+      const lineHeight = fontSize * lineRatio;
+      const blockW = maxLineUnits * fontSize;
+      const blockH = lineCount * lineHeight;
+      const left = c.x - blockW / 2;
+      const top = c.y - blockH / 2;
+      g.setAttribute('transform', 'translate(' + left + ',' + top + ')');
+      textEl.setAttribute('font-size', fontSize);
+      const tsx = blockW / 2;
+      const baseY = lineHeight / 2;
+      tspans.forEach((t, i) => {
+        t.setAttribute('x', tsx);
+        t.setAttribute('y', baseY + i * lineHeight);
+        t.setAttribute('dominant-baseline', 'central');
+      });
+    }
+
+    function remove() {
+      map.off('zoomend moveend resize', update);
+      if (g.parentNode) g.parentNode.removeChild(g);
+      const idx = pointsTextLayers.indexOf(obj);
+      if (idx >= 0) pointsTextLayers.splice(idx, 1);
+    }
+
+    obj.update = update;
+    obj.remove = remove;
+    map.on('zoomend moveend resize', update);
+    update();
+    pointsTextLayers.push(obj);
+  }
+
+  function clearPointsTextLayers() {
+    pointsTextLayers.slice().forEach((o) => o.remove());
+    pointsTextLayers = [];
+  }
+
+    function pointsToLatLngs(points) {
+    if (!Array.isArray(points) || points.length < 3) return null;
+    const nested = Array.isArray(points[0]);
+    const latlngs = [];
+    if (nested) {
+      for (const p of points) {
+        if (!Array.isArray(p) || p.length < 2) return null;
+        const lat = Number(p[0]);
+        const lng = Number(p[1]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        latlngs.push([lat, lng]);
+      }
+    } else {
+      for (let i = 0; i + 1 < points.length; i += 2) {
+        const lat = Number(points[i]);
+        const lng = Number(points[i + 1]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        latlngs.push([lat, lng]);
+      }
+    }
+    return latlngs.length >= 3 ? latlngs : null;
   }
 
   function renderCategoryMarkers() {

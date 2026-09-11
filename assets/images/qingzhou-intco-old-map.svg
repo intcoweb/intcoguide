@@ -27,25 +27,15 @@
   <polygon points="158.3,1062.2 562.9,1063.4 567.5,748.7 632.5,737.2 596,123.8 303.1,221.1 158.3,253.2 150.4,952.4" fill="none" stroke="#158b86" stroke-width="5" stroke-linejoin="round"/>
 
   <g clip-path="url(#siteClip)">
-    <path class="zone" d="M158 264 L228 248 L228 627 L158 637 Z" fill="url(#warehouseHatch)"/>
-    <text class="label small" x="188" y="455" transform="rotate(-90 188 455)">原料仓库</text>
-
     <rect class="zone" x="257" y="281" width="50" height="63" rx="7" fill="#ff7b7c"/>
     <text class="label small" x="282" y="306">展厅</text>
     <text class="label tiny" x="282" y="327">二楼办公</text>
     <rect class="zone" x="325" y="252" width="21" height="28" rx="4" fill="#b6b6fe"/>
-    <rect class="zone" x="348" y="252" width="91" height="26" rx="4" fill="#e9ffb4"/>
-    <text class="label tiny" x="393" y="268">箱盒仓库 / 小料仓库</text>
-
     <rect class="zone" x="308" y="281" width="151" height="62" rx="7" fill="url(#nitrile)"/>
     <text class="label large" x="384" y="317">丁腈1车间</text>
-    <rect class="zone" x="275" y="343" width="70" height="20" rx="4" fill="url(#nitrile)"/>
-    <text class="label tiny" x="310" y="356">丁腈1成品仓库</text>
     <rect class="zone" x="346" y="343" width="93" height="20" rx="4" fill="#88bcf5"/>
     <text class="label tiny" x="392" y="356">空压机房 / 制冷机房</text>
 
-    <rect class="zone" x="256" y="367" width="30" height="86" rx="4" fill="#e9e9e9"/>
-    <text class="label tiny" x="271" y="410" transform="rotate(-90 271 410)">PVC1成品仓库</text>
     <path class="zone" d="M286 367 H452 V433 H420 V453 H286 Z" fill="#dedfe0"/>
     <text class="label large" x="369" y="411">PVC1车间</text>
     <text class="label tiny" x="369" y="428">二楼研发中心</text>
@@ -79,15 +69,12 @@
 
     <rect class="zone" x="176" y="647" width="278" height="52" rx="7" fill="url(#nitrile)"/>
     <text class="label large" x="315" y="678">丁腈3车间</text>
-    <text class="label tiny" x="315" y="690">丁腈3成品仓库 / 生产线</text>
 
     <rect class="zone" x="176" y="716" width="34" height="60" rx="3" fill="#f4b197"/>
     <text class="label small" x="193" y="749">二楼</text>
     <text class="label small" x="193" y="762">体育馆</text>
     <rect class="zone" x="210" y="716" width="232" height="60" rx="3" fill="url(#nitrile)"/>
     <text class="label large" x="326" y="750">丁腈2车间</text>
-    <path class="zone" d="M176 780 H394 V833 H333 V847 H176 Z" fill="url(#nitrile)"/>
-    <text class="label medium" x="286" y="813">丁腈2成品仓库</text>
     <rect class="zone" x="415" y="786" width="20" height="31" rx="3" fill="#ffd39a"/>
     <text class="label tiny" x="425" y="804" transform="rotate(-90 425 804)">配电室</text>
 
@@ -101,7 +88,6 @@
     <text class="label tiny" x="506" y="621" transform="rotate(-90 506 621)">配电室</text>
     <rect class="zone" x="526" y="608" width="17" height="27" rx="3" fill="#88bcf5"/>
     <text class="label tiny" x="535" y="624" transform="rotate(-90 535 624)">制冷机房</text>
-    <path class="zone" d="M565 600 H605 V694 H565 Z" fill="url(#warehouseHatch)"/>
 
     <rect class="zone" x="492" y="660" width="53" height="48" rx="4" fill="#b6b6fe"/>
     <text class="label small" x="518" y="688">锅炉房</text>
@@ -119,13 +105,6 @@
     <text class="label large" x="284" y="883">PVC2车间</text>
     <rect class="zone" x="175" y="905" width="219" height="57" rx="5" fill="#dedfe0"/>
     <text class="label medium" x="284" y="938">PVC3车间</text>
-    <rect class="zone" x="446" y="945" width="36" height="26" rx="3" fill="#dedfe0"/>
-    <text class="label tiny" x="464" y="961">PVC原料库</text>
-    <path class="zone" d="M565 805 L604 805 L604 923 L576 949 L548 949 Z" fill="url(#warehouseHatch)"/>
-    <rect class="zone" x="444" y="988" width="41" height="29" rx="3" fill="#dedfe0"/>
-    <text class="label tiny" x="465" y="1006">危化品库</text>
-    <rect class="zone" x="373" y="988" width="30" height="58" rx="3" fill="#dedfe0"/>
-    <text class="label tiny" x="388" y="1022" transform="rotate(-90 388 1022)">PVC粉料库</text>
     <rect class="zone" x="294" y="988" width="48" height="14" rx="3" fill="#cf99f1"/>
     <text class="label tiny" x="318" y="998">手膜清洗房</text>
     <rect class="zone" x="175" y="977" width="118" height="28" rx="13" fill="#fff"/>

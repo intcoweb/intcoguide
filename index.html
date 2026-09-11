@@ -102,17 +102,26 @@
 
       <div class="map-right-tools qingzhou-map-tools">
         <div class="location" id="qingzhouMapRestoreBtn" title="还原">
-          <img src="assets/images/restore.png" alt="还原" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M3 8V5a2 2 0 0 1 2-2h3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 16v3a2 2 0 0 0 2 2h3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 16v3a2 2 0 0 1-2 2h-3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="2.5" stroke="#31535e" stroke-width="2" fill="none"/>
+          </svg>
         </div>
         <div class="location" id="qingzhouMapLocationBtn" title="定位">
-          <img src="assets/images/location.png" alt="定位" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 3v4h-4" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
         <button class="map-layer-toggle" id="qingzhouMapLayerToggle" title="显示或隐藏厂区贴图">隐藏贴图</button>
       </div>
 
       <!-- 青州罗盘（陀螺仪方向指示） -->
       <div class="qingzhou-compass" id="qingzhouCompass" title="陀螺仪方向">
-        <div class="qingzhou-compass-arrow" id="qingzhouCompassArrow">▲</div>
+        <div class="qingzhou-compass-arrow" id="qingzhouCompassArrow"><span class="needle"></span></div>
         <div class="qingzhou-compass-deg" id="qingzhouCompassDeg">--°</div>
       </div>
     </section>
