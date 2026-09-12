@@ -4,12 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0b2a45" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>安徽英科医疗导航</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" />
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20260912-9" />
 </head>
 <body>
   <div id="app">
@@ -67,63 +70,6 @@
 
       <!-- 底部按钮 -->
       <div class="map-bottom hidden" id="mapBottomBtn"></div>
-    </section>
-
-    <!-- ======================= 青州地图模块（可整段删除） ======================= -->
-    <section class="page page-qingzhou-map" id="page-qingzhou-map">
-      <div class="map-top-card qingzhou-map-top-card">
-        <div class="map-top-left">
-          <div class="map-field up">
-            <span class="dot start"></span>
-            <input class="map-input" value="" placeholder="当前位置" readonly />
-          </div>
-          <div class="map-field">
-            <span class="dot end"></span>
-            <input class="map-input" id="qingzhouMapEndInput" placeholder="请选择终点" readonly />
-          </div>
-        </div>
-        <div class="map-top-middle">
-          <button class="map-exchange" id="qingzhouMapExchangeBtn" title="对调起点/终点">
-            <img src="https://lbs.gtimg.com/visual/miniprogram-plugin/route-planning/assets/exchange.png" alt="交换" />
-          </button>
-        </div>
-        <div class="map-top-right">
-          <button class="map-route-btn" id="qingzhouMapRouteBtn">路线</button>
-        </div>
-      </div>
-
-      <div class="map-control qingzhou-map-control">
-        <div class="map-campus-wrap">
-          <button class="picker" type="button">地图</button>
-        </div>
-      </div>
-
-      <div id="qingzhouMap"></div>
-
-      <div class="map-right-tools qingzhou-map-tools">
-        <div class="location" id="qingzhouMapRestoreBtn" title="还原">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M3 8V5a2 2 0 0 1 2-2h3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 8V5a2 2 0 0 0-2-2h-3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 16v3a2 2 0 0 0 2 2h3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 16v3a2 2 0 0 1-2 2h-3" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="12" r="2.5" stroke="#31535e" stroke-width="2" fill="none"/>
-          </svg>
-        </div>
-        <div class="location" id="qingzhouMapLocationBtn" title="定位">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M20 3v4h-4" stroke="#31535e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <button class="map-layer-toggle" id="qingzhouMapLayerToggle" title="显示或隐藏厂区贴图">隐藏贴图</button>
-      </div>
-
-      <!-- 青州罗盘（陀螺仪方向指示） -->
-      <div class="qingzhou-compass" id="qingzhouCompass" title="陀螺仪方向">
-        <div class="qingzhou-compass-arrow" id="qingzhouCompassArrow"><span class="needle"></span></div>
-        <div class="qingzhou-compass-deg" id="qingzhouCompassDeg">--°</div>
-      </div>
     </section>
 
     <!-- ======================= 地点汇总 Tab ======================= -->
@@ -235,7 +181,7 @@
       <a class="tab-item" data-route="#/map">
         <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="地图" /><span>地图</span>
       </a>
-      <!-- 青州地图入口（可与上方青州地图模块一起删除） -->
+      <!-- 青州地图入口：与「地图」共用同一套实现，只切换厂区数据 -->
       <a class="tab-item" data-route="#/qingzhou-map">
         <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="青州地图" /><span>青州地图</span>
       </a>
@@ -263,7 +209,7 @@
   </div>
 
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/data.js?v=20260912-9"></script>
+  <script src="js/app.js?v=20260912-9"></script>
 </body>
 </html>

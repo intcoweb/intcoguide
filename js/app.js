@@ -9,39 +9,7 @@
   const MEDIA = D.media;
   const MINI_NAME = DATA.miniprogram_name;
 
-  /* 青州地图模块（可整段删除） */
-  const QINGZHOU_MAP_CONFIG = {
-    center: [36.76472325, 118.38438492],
-    zoom: 16,
-    overlay: {
-      image: 'assets/images/qingzhou-intco-old-map.png?v=20260909-2',
-      bounds: [[36.75901813, 118.3804614], [36.76873218, 118.3881691]],
-    },
-  };
-  const QINGZHOU_GUIDE_ROUTE = [
-    [36.767321, 118.384215],
-    [36.766827, 118.384283],
-    [36.766688, 118.382893],
-    [36.765153, 118.382848],
-    [36.765126, 118.385274],
-    [36.764166, 118.385273],
-    [36.764152, 118.383295],
-    [36.764256, 118.383252],
-    [36.764248, 118.382672],
-    [36.765115, 118.382845],
-    [36.766665, 118.382866],
-    [36.766822, 118.384302],
-  ];
-
   const AREA_GUIDES = {
-    '主要地点': {
-      en: 'MAIN / AREA', subtitle: '核心功能区域',
-      steps: [
-        { t: '登记进入', d: '经工厂大门核实登记后进入厂区。' },
-        { t: '厂区导览', d: '沿主路参观办公楼与生产区域。' },
-        { t: '前往目标', d: '根据导航前往目的车间或设施。' }
-      ]
-    },
     '丁腈车间': {
       en: 'NITRILE / WORKSHOP', subtitle: '丁腈手套生产线',
       steps: [
@@ -58,14 +26,6 @@
         { t: '冷却包装', d: '冷却、脱模后分拣包装。' }
       ]
     },
-    '仓储与配料': {
-      en: 'STORAGE / AREA', subtitle: '仓储与动力保障',
-      steps: [
-        { t: '原料入库', d: '原料按品类分类存储并登记。' },
-        { t: '按需配送', d: '按生产计划向车间配送物料。' },
-        { t: '能源保障', d: '变电、锅炉与气体供应保障生产。' }
-      ]
-    },
     '环保设施': {
       en: 'ENVIRONMENT', subtitle: '绿色环保处理系统',
       steps: [
@@ -77,9 +37,10 @@
     '生活配套': {
       en: 'LIFE / AREA', subtitle: '员工生活服务区',
       steps: [
-        { t: '用餐休息', d: '食堂与餐厅提供员工用餐休息。' },
-        { t: '休闲运动', d: '篮球场与绿化区提供休闲空间。' },
-        { t: '安全服务', d: '门卫室与卫生间提供保障服务。' }
+        { t: '住宿区域', d: '公寓为员工提供住宿服务。' },
+        { t: '进出厂区', d: '从工厂大门进出并按要求登记。' },
+        { t: '办公区域', d: '办公室提供日常行政与接待服务。' },
+        { t: '门岗登记', d: '工厂门卫负责访客登记与进出管理。' }
       ]
     }
   };
@@ -160,7 +121,8 @@
     mapDefaultPoint: null,
     mapPoints: [],
     mapInited: false,
-    qingzhouMapInited: false,
+    mapCampus: 0,        // 地图页当前厂区（0=淮北 1=青州）
+    appliedCampus: -1,   // 已经渲染到地图上的厂区
     showMapImg: true,
     route: {
       polyline: null,     // Leaflet polyline
@@ -180,6 +142,13 @@
   function currentCampus() {
     return MAP.site_data[state.choose] || MAP.site_data[0];
   }
+  /* 地图页当前厂区：由底部 tab（地图 / 青州地图）决定 */
+  function mapCampusData() {
+    return MAP.site_data[state.mapCampus] || MAP.site_data[0];
+  }
+  function mapSiteData() {
+    return mapCampusData().category_list || [];
+  }
   function currentSiteData() {
     return currentCampus().category_list || [];
   }
@@ -191,9 +160,17 @@
       const found = (cat.list || []).find((x) => x.name === '工厂大门');
       if (found) return found;
     }
-    if (!c.site_id) return null;
-    const cat = cats.find((x) => x.id === c.site_id[0]);
-    return (cat && cat.list && cat.list.find((x) => x.id === c.site_id[1])) || null;
+    const cat = c.site_id ? cats.find((x) => x.id === c.site_id[0]) : null;
+    const linked = cat && cat.list && cat.list.find((x) => x.id === c.site_id[1]);
+    if (linked && linked.name === '工厂大门') return linked;
+    if (Number.isFinite(Number(c.latitude)) && Number.isFinite(Number(c.longitude))) {
+      return {
+        name: '厂区中心',
+        latitude: Number(c.latitude),
+        longitude: Number(c.longitude),
+      };
+    }
+    return null;
   }
 
   /* =========================================================
@@ -204,7 +181,9 @@
   function setActiveTab(tab) {
     state.tab = tab;
     $$('.page').forEach((p) => p.classList.remove('active'));
-    const page = $('#page-' + tab);
+    // 「地图」与「青州地图」共用同一个页面，只是厂区数据不同
+    const pageId = (tab === 'qingzhou-map') ? 'map' : tab;
+    const page = $('#page-' + pageId);
     if (page) page.classList.add('active');
 
     $$('.tab-item').forEach((t) => {
@@ -242,8 +221,8 @@
     if (TAB_ROUTES.includes(name)) {
       hideSub();
       setActiveTab(name);
-      if (name === 'map') onMapShow();
-      if (name === 'qingzhou-map') onQingzhouMapShow();
+      if (name === 'map') { state.mapCampus = 0; onMapShow(); }
+      if (name === 'qingzhou-map') { state.mapCampus = 1; onMapShow(); }
       if (name === 'site') onSiteShow();
       if (name === 'home') onHomeShow();
     } else if (name === 'search') {
@@ -444,7 +423,7 @@
     const data = currentSiteData();
     const cat = data[state.siteCategory] || data[0];
     if (!cat) return;
-    const icons = { '主要地点': '🏢', '丁腈车间': '🏭', 'PVC车间': '🧤', '仓储与配料': '📦', '环保设施': '♻️', '生活配套': '🍽️' };
+    const icons = { '丁腈车间': '🏭', 'PVC车间': '🧤', '环保设施': '♻️', '生活配套': '🍽️' };
     $('#siteLeft').innerHTML = data.map((c, i) => {
       const ic = icons[c.name] || '📍';
       return '<button class="site-cat' + (i === state.siteCategory ? ' choose' : '') + '" data-i="' + i + '">' +
@@ -502,283 +481,234 @@
   let pointsTextLayers = [];
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
-  /* 青州地图模块（可整段删除） */
-  let qingzhouMap = null;
-  let qingzhouMapMarker = null;
-  let qingzhouMapOverlay = null;
-  let qingzhouMapRoute = null;
-  let qingzhouMapRouteMarkers = [];
-  let qingzhouMapRouteArrows = [];
-  let qingzhouMapOverlayVisible = true;
-  let qingzhouUserMarker = null;      // 用户当前位置 marker
-  let qingzhouUserHeading = -1;       // 陀螺仪朝向（度，-1 表示未知）
-  let qingzhouLocationWatching = false;
-  let qingzhouFirstFixToast = false; // 首次定位成功的提示是否已展示
-  let qingzhouCompassInited = false;
-  let qingzhouHeadingReceived = false;  // 是否收到过朝向数据
-  let qingzhouHeadingTimer = null;      // 方向数据超时计时器
-
-  function qingzhouRouteBearing(start, end) {
-    const latitude = ((start[0] + end[0]) / 2) * Math.PI / 180;
-    return Math.atan2((end[1] - start[1]) * Math.cos(latitude), end[0] - start[0]) * 180 / Math.PI;
-  }
-
-  function onQingzhouMapShow() {
-    if (!state.qingzhouMapInited) {
-      state.qingzhouMapInited = true;
-      initQingzhouMap();
-    } else if (qingzhouMap) {
-      qingzhouMap.invalidateSize();
-    }
-  }
-
-  /* 用户位置 marker（纯蓝点，不带朝向箭头） */
-  function qingzhouUserIcon() {
-    return L.divIcon({
-      className: 'qingzhou-user-marker-icon',
-      html: '<div class="user-dot"></div>',
-      iconSize: [26, 26],
-      iconAnchor: [13, 13],
-    });
-  }
+  /* ---------- 定位（淮北地图与青州地图共用） ---------- */
+  let mapUserMarker = null;         // 用户当前位置蓝点
+  let mapLocationWatching = false;  // 是否已开启持续定位
+  let mapFirstFixToast = false;     // 首次定位成功提示是否已展示
+  let mapOrientationAttached = false;
+  let mapOrientationPermissionPromise = null;
+  let mapOrientationAbsoluteAt = 0;
+  let mapCurrentHeading = null;
+  let guideRouteLayer = null;       // 厂区固定引导路线（data.js 里的 guide_route）
+  let guideRoutePoints = [];
 
   /* 浏览器定位 WGS-84 -> 地图 GCJ-02 */
-  function qingzhouToGcj(lat, lng) {
+  function toGcj(lat, lng) {
     const g = wgs2gcj(lat, lng);
     return [g.lat, g.lng];
   }
 
-  function updateQingzhouUserMarker(latLng) {
-    if (!qingzhouMap) return;
-    if (!qingzhouUserMarker) {
-      qingzhouUserMarker = L.marker(latLng, {
-        icon: qingzhouUserIcon(),
-        zIndexOffset: 500,
-        interactive: false,
-      }).addTo(qingzhouMap);
+  /* 用户位置 marker：实时蓝点，收到有效朝向后显示箭头 */
+  function mapUserIcon() {
+    return L.divIcon({
+      className: 'map-user-marker-icon',
+      html: '<div class="user-heading"></div><div class="user-dot"></div>',
+      iconSize: [38, 38],
+      iconAnchor: [19, 19],
+    });
+  }
+
+  function updateUserMarker(latLng, center) {
+    if (!map) return;
+    if (!mapUserMarker) {
+      mapUserMarker = L.marker(latLng, { icon: mapUserIcon(), zIndexOffset: 500, interactive: false }).addTo(map);
     } else {
-      qingzhouUserMarker.setLatLng(latLng);
+      mapUserMarker.setLatLng(latLng);
     }
+    updateHeadingVisuals(mapCurrentHeading);
+    if (center) map.setView(latLng, Math.max(map.getZoom(), 16));
   }
 
-  // 把地图移动到用户当前位置并居中（用于首次定位与刷新定位）
-  function qingzhouLocateAndCenter(lat, lng) {
-    updateQingzhouUserMarker([lat, lng]);
-    if (qingzhouMap) qingzhouMap.setView([lat, lng], Math.max(qingzhouMap.getZoom(), 16));
+  function locateAndCenter(lat, lng) {
+    updateUserMarker([lat, lng], true);
   }
 
-  function qingzhouHandleLocError(err) {
-    if (err && err.code === err.PERMISSION_DENIED) {
-      qingzhouPermissionHint('定位');
-    } else {
-      toast('定位失败，请到空旷处重试');
+  function locationErrorMessage(err) {
+    const code = err && Number(err.code);
+    const detail = err && err.message ? '（' + err.message + '）' : '';
+    if (code === 1) {
+      return '定位失败：你拒绝了浏览器的位置权限，请在浏览器网站设置中允许定位' + detail;
     }
-  }
-
-  function startQingzhouLocationWatch() {
-    const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 };
-    const onSuccess = (pos) => {
-      const [lat, lng] = qingzhouToGcj(pos.coords.latitude, pos.coords.longitude);
-      // watchPosition 持续跟随：只更新蓝点位置，不再自动居中地图，避免干扰浏览
-      updateQingzhouUserMarker([lat, lng]);
-      if (!qingzhouFirstFixToast) {
-        qingzhouFirstFixToast = true;
-        qingzhouLocateAndCenter(lat, lng); // 仅首次定位成功时居中一次
-        toast('已定位到当前位置', 1200);
-      }
-    };
-    const onError = (err) => qingzhouHandleLocError(err);
-    qingzhouLocationWatching = true;
-    navigator.geolocation.watchPosition(onSuccess, onError, options);
-    // 方向数据超时检测：仅非 iOS 主动授权流程（未弹过权限请求）时启用，
-    // 避免与 iOS 点击定位按钮触发的 requestPermission 弹窗重复。
-    if (window.DeviceOrientationEvent && !qingzhouHeadingReceived &&
-        typeof window.DeviceOrientationEvent.requestPermission !== 'function') {
-      clearTimeout(qingzhouHeadingTimer);
-      qingzhouHeadingTimer = setTimeout(() => {
-        if (!qingzhouHeadingReceived) qingzhouPermissionHint('方向');
-      }, 5000);
+    if (code === 2) {
+      return '定位失败：设备暂时无法获取位置，可能是 GPS、网络定位或系统定位服务不可用' + detail;
     }
-  }
-
-  /* 陀螺仪方向（罗盘） */
-  function updateQingzhouCompass(heading) {
-    const arrow = $('#qingzhouCompassArrow');
-    const deg = $('#qingzhouCompassDeg');
-    // 罗盘指针始终指向北方：设备朝北为 heading=0，指针反向旋转保持指北
-    if (arrow) arrow.style.transform = 'rotate(' + (-heading) + 'deg)';
-    if (deg) deg.textContent = Math.round(heading) + '°';
-  }
-
-  function onQingzhouOrientation(e) {
-    // 优先绝对朝向（真北）；拿不到时退回相对 alpha（设备初始朝向），保证指针能动
-    let heading = null;
-    if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
-      heading = e.webkitCompassHeading;
-    } else if (typeof e.alpha === 'number' && e.absolute === true) {
-      heading = e.alpha;
-    } else if (typeof e.alpha === 'number') {
-      heading = e.alpha;
+    if (code === 3) {
+      return '定位失败：获取位置超时，请检查系统定位服务或网络/GPS 信号后重试' + detail;
     }
-    if (heading === null || heading < 0 || heading > 360) return;
-    qingzhouHeadingReceived = true;
-    clearTimeout(qingzhouHeadingTimer);
-    qingzhouUserHeading = heading;
-    updateQingzhouCompass(heading);
+    const codeDetail = Number.isFinite(code) ? '（错误码：' + code + '）' : '';
+    return '定位失败：浏览器未返回明确原因' + codeDetail + detail;
   }
 
-  /* 权限引导弹窗 */
-  function qingzhouPermissionHint(kind) {
-    const isLoc = kind === '定位';
-    const rows = isLoc
-      ? '<div class="instruction-row"><div class="k">操作</div><div class="v">点击浏览器地址栏左侧的锁形/信息图标，选择“网站设置”</div></div>' +
-        '<div class="instruction-row"><div class="k">定位</div><div class="v">将“位置”权限设为“允许”，然后返回刷新页面</div></div>'
-      : '<div class="instruction-row"><div class="k">操作</div><div class="v">点击浏览器地址栏左侧的锁形/信息图标，选择“网站设置”</div></div>' +
-        '<div class="instruction-row"><div class="k">方向</div><div class="v">开启“运动与方向 / 方向传感器”权限，然后返回刷新页面</div></div>';
+  function showLocationError(err) {
+    const message = locationErrorMessage(err);
+    toast(message, 3500);
     openModal(
-      (isLoc ? '定位权限' : '方向权限') + '未开启',
-      '<p class="explain-desc">' + (isLoc ? '无法获取当前位置，无法在地图上显示你的位置。' : '无法获取设备朝向，罗盘指针无法指示方向。') + '</p>' +
-      '<div class="instruction-txt">请按以下步骤开启：</div>' + rows,
+      '定位失败',
+      '<p class="explain-desc">' + esc(message) + '</p>' +
+      '<div class="instruction-txt">请检查浏览器的位置权限、系统定位服务和网络/GPS 信号后重试。</div>',
       [{ text: '知道了' }]
     );
   }
 
-  function initQingzhouCompass() {
-    if (qingzhouCompassInited) return;
-    qingzhouCompassInited = true;
-    if (window.DeviceOrientationEvent) {
-      const attach = () => {
-        window.addEventListener('deviceorientationabsolute', onQingzhouOrientation, true);
-        window.addEventListener('deviceorientation', onQingzhouOrientation, true);
-      };
-      // iOS 13+ 需要用户手势才能获取方向数据，把权限请求挂到定位按钮点击
-      if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-        const btn = $('#qingzhouMapLocationBtn');
-        if (btn) btn.addEventListener('click', () => {
-          window.DeviceOrientationEvent.requestPermission()
-            .then((res) => {
-              if (res === 'granted') attach();
-              else qingzhouPermissionHint('方向');
-            })
-            .catch(() => qingzhouPermissionHint('方向'));
-        }, { once: true });
-      } else {
-        attach();
-      }
-    } else {
-      const arrow = $('#qingzhouCompassArrow');
-      const deg = $('#qingzhouCompassDeg');
-      if (arrow) arrow.style.opacity = '.35';
-      if (deg) deg.textContent = '无';
+  function handleLocError(err) {
+    showLocationError(err);
+  }
+
+  function normalizeHeading(value) {
+    if (!Number.isFinite(value)) return null;
+    return (value % 360 + 360) % 360;
+  }
+
+  function screenOrientationAngle() {
+    const angle = window.screen && window.screen.orientation
+      ? Number(window.screen.orientation.angle)
+      : Number(window.orientation);
+    return Number.isFinite(angle) ? angle : 0;
+  }
+
+  function readDeviceHeading(event, source) {
+    if (typeof event.webkitCompassHeading === 'number' && Number.isFinite(event.webkitCompassHeading)) {
+      return normalizeHeading(event.webkitCompassHeading);
+    }
+    if (typeof event.alpha !== 'number' || !Number.isFinite(event.alpha)) return null;
+    const absolute = source === 'absolute' || event.absolute === true;
+    return normalizeHeading(absolute
+      ? 360 - event.alpha + screenOrientationAngle()
+      : 360 - event.alpha + screenOrientationAngle());
+  }
+
+  function updateHeadingVisuals(heading) {
+    const arrow = $('.map-user-marker-icon .user-heading');
+    if (!arrow) return;
+    if (!Number.isFinite(heading)) {
+      arrow.classList.remove('visible');
+      return;
+    }
+    arrow.style.transform = 'translate(-50%, -100%) rotate(' + heading + 'deg)';
+    arrow.classList.add('visible');
+  }
+
+  function onDeviceOrientation(event, source) {
+    if (source === 'absolute') {
+      mapOrientationAbsoluteAt = Date.now();
+    } else if (mapOrientationAbsoluteAt && Date.now() - mapOrientationAbsoluteAt < 1500) {
+      return;
+    }
+    const heading = readDeviceHeading(event, source);
+    if (heading === null) return;
+    mapCurrentHeading = heading;
+    updateHeadingVisuals(heading);
+  }
+
+  function attachOrientationListeners() {
+    if (mapOrientationAttached || !window.DeviceOrientationEvent) return;
+    mapOrientationAttached = true;
+    window.addEventListener('deviceorientationabsolute', (event) => onDeviceOrientation(event, 'absolute'), true);
+    window.addEventListener('deviceorientation', (event) => onDeviceOrientation(event, 'relative'), true);
+  }
+
+  function requestOrientationPermission() {
+    if (!window.DeviceOrientationEvent) return Promise.resolve(false);
+    if (mapOrientationPermissionPromise) return mapOrientationPermissionPromise;
+    const request = window.DeviceOrientationEvent.requestPermission;
+    mapOrientationPermissionPromise = (typeof request === 'function'
+      ? request.call(window.DeviceOrientationEvent).then((result) => {
+        if (result !== 'granted') {
+          mapOrientationPermissionPromise = null;
+          return false;
+        }
+        attachOrientationListeners();
+        return true;
+      })
+      : Promise.resolve(true).then(() => {
+        attachOrientationListeners();
+        return true;
+      })
+    ).catch(() => {
+      mapOrientationPermissionPromise = null;
+      return false;
+    });
+    return mapOrientationPermissionPromise;
+  }
+
+  function initOrientation() {
+    if (!window.DeviceOrientationEvent) return;
+    if (typeof window.DeviceOrientationEvent.requestPermission !== 'function') {
+      attachOrientationListeners();
     }
   }
 
-  function initQingzhouMap() {
-    qingzhouMap = L.map('qingzhouMap', { zoomControl: false, attributionControl: true });
-    qingzhouMap.setView(QINGZHOU_MAP_CONFIG.center, QINGZHOU_MAP_CONFIG.zoom);
-    L.control.zoom({ position: 'bottomleft' }).addTo(qingzhouMap);
-    L.tileLayer('https://rt{s}.map.gtimg.com/tile?z={z}&x={x}&y={y}&type=vector&styleid=0', {
-      tms: true,
-      subdomains: '0123',
-      maxZoom: 20,
-      minZoom: 3,
-      attribution: '© 腾讯地图',
-    }).addTo(qingzhouMap);
+  /* 持续定位：只更新蓝点位置，不自动居中，避免干扰浏览 */
+  function startLocationWatch() {
+    if (mapLocationWatching || !navigator.geolocation) return;
+    mapLocationWatching = true;
+    navigator.geolocation.watchPosition((pos) => {
+      const [lat, lng] = toGcj(pos.coords.latitude, pos.coords.longitude);
+      const isFirst = !mapFirstFixToast;
+      mapFirstFixToast = true;
+      updateUserMarker([lat, lng], isFirst); // 仅首次定位成功时居中一次
+      if (isFirst) toast('已定位到当前位置', 1200);
+    }, handleLocError, { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 });
+  }
 
-    qingzhouMapOverlay = L.imageOverlay(
-      QINGZHOU_MAP_CONFIG.overlay.image,
-      QINGZHOU_MAP_CONFIG.overlay.bounds,
-      { opacity: 1, interactive: false, className: 'qingzhou-map-overlay' }
-    ).addTo(qingzhouMap);
+  /* 两点间方位角（度） */
+  function routeBearing(start, end) {
+    const latitude = ((start[0] + end[0]) / 2) * Math.PI / 180;
+    return Math.atan2((end[1] - start[1]) * Math.cos(latitude), end[0] - start[0]) * 180 / Math.PI;
+  }
 
-    qingzhouMapRoute = L.polyline(QINGZHOU_GUIDE_ROUTE, {
-      color: '#ef4444',
-      weight: 4,
-      opacity: 0.9,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(qingzhouMap);
-    qingzhouMapRouteArrows = QINGZHOU_GUIDE_ROUTE.slice(0, -1).map((point, index) => {
-      const nextPoint = QINGZHOU_GUIDE_ROUTE[index + 1];
+  /* 厂区固定引导路线（在各厂区数据的 guide_route 里配置） */
+  function renderGuideRoute(campus) {
+    if (guideRouteLayer) { map.removeLayer(guideRouteLayer); guideRouteLayer = null; }
+    guideRoutePoints = (campus && Array.isArray(campus.guide_route)) ? campus.guide_route : [];
+    if (guideRoutePoints.length < 2) { guideRoutePoints = []; return; }
+    const layers = [];
+    layers.push(L.polyline(guideRoutePoints, {
+      color: '#ef4444', weight: 4, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false,
+    }));
+    guideRoutePoints.slice(0, -1).forEach((point, index) => {
+      const nextPoint = guideRoutePoints[index + 1];
       const midpoint = [(point[0] + nextPoint[0]) / 2, (point[1] + nextPoint[1]) / 2];
-      const angle = qingzhouRouteBearing(point, nextPoint) - 90;
-      return L.marker(midpoint, {
+      const angle = routeBearing(point, nextPoint) - 90;
+      layers.push(L.marker(midpoint, {
         icon: L.divIcon({
-          className: 'qingzhou-route-arrow-icon',
+          className: 'map-route-arrow-icon',
           html: '<span style="transform: rotate(' + angle + 'deg)">➤</span>',
           iconSize: [18, 18],
           iconAnchor: [9, 9],
         }),
         interactive: false,
-      }).addTo(qingzhouMap);
+      }));
     });
-    qingzhouMapRouteMarkers = QINGZHOU_GUIDE_ROUTE.map((point, index) => L.circleMarker(point, {
-      radius: index === 0 || index === QINGZHOU_GUIDE_ROUTE.length - 1 ? 5 : 2.5,
-      color: '#fff',
-      weight: 2,
-      fillColor: '#ef4444',
-      fillOpacity: 1,
-      interactive: false,
-    }).addTo(qingzhouMap));
-
-    qingzhouMapMarker = L.marker(QINGZHOU_MAP_CONFIG.center).addTo(qingzhouMap);
-
-    $('#qingzhouMapRestoreBtn').addEventListener('click', () => {
-      qingzhouMap.setView(QINGZHOU_MAP_CONFIG.center, QINGZHOU_MAP_CONFIG.zoom);
+    guideRoutePoints.forEach((point, index) => {
+      layers.push(L.circleMarker(point, {
+        radius: (index === 0 || index === guideRoutePoints.length - 1) ? 5 : 2.5,
+        color: '#fff', weight: 2, fillColor: '#ef4444', fillOpacity: 1, interactive: false,
+      }));
     });
-    $('#qingzhouMapLocationBtn').addEventListener('click', () => {
-      if (!navigator.geolocation) {
-        toast('当前浏览器不支持定位');
-        return;
-      }
-      toast('正在获取位置…');
-      // 已在跟随：重新获取一次当前位置并居中，不停止定位跟随
-      if (qingzhouLocationWatching) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const [lat, lng] = qingzhouToGcj(pos.coords.latitude, pos.coords.longitude);
-            qingzhouLocateAndCenter(lat, lng);
-            toast('已定位到当前位置', 1200);
-          },
-          (err) => qingzhouHandleLocError(err),
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
-        );
-        return;
-      }
-      startQingzhouLocationWatch();
-    });
-    $('#qingzhouMapLayerToggle').addEventListener('click', (e) => {
-      qingzhouMapOverlayVisible = !qingzhouMapOverlayVisible;
-      if (qingzhouMapOverlay) qingzhouMapOverlay.setOpacity(qingzhouMapOverlayVisible ? 1 : 0);
-      e.currentTarget.textContent = qingzhouMapOverlayVisible ? '隐藏贴图' : '显示贴图';
-    });
-    $('#qingzhouMapExchangeBtn').addEventListener('click', () => {
-      const input = $('#qingzhouMapEndInput');
-      const value = input.value;
-      input.value = value ? '当前位置' : '';
-      input.placeholder = value ? '请选择终点' : '当前位置';
-    });
-    $('#qingzhouMapRouteBtn').addEventListener('click', () => {
-      if (qingzhouMapRoute) qingzhouMap.fitBounds(qingzhouMapRoute.getBounds(), { padding: [40, 40] });
-    });
-    initQingzhouCompass();
-    setTimeout(() => { if (qingzhouMap) qingzhouMap.invalidateSize(); }, 60);
+    guideRouteLayer = L.layerGroup(layers).addTo(map);
   }
 
   function onMapShow() {
     if (!state.mapInited) {
       state.mapInited = true;
       initMap();
-    } else {
-      if (map) map.invalidateSize();
-      syncMapInputs();
+      return;
     }
+    // 地图 / 青州地图 共用同一套实现：只有真正换了厂区才重载数据，
+    // 同一个 tab 来回切（如从搜索页返回）保留已选起终点。
+    if (state.mapCampus !== state.appliedCampus) {
+      applyCampus();
+      renderGuideRoute(mapCampusData());
+    }
+    if (map) map.invalidateSize();
+    syncMapInputs();
   }
 
   function initMap() {
     state.campus_list = MAP.site_data.map((s) => ({ id: s.id, name: s.name }));
     state.campus_name_list = MAP.site_data.map((s) => s.name);
-    state.mapDefaultPoint = defaultPointOf(MAP.site_data[state.choose]);
+    state.mapDefaultPoint = defaultPointOf(mapCampusData());
 
     map = L.map('leafletMap', { zoomControl: false, attributionControl: true });
     map.createPane('pointsPane');
@@ -799,7 +729,28 @@
     $('#mapCampusBtn').addEventListener('click', () => showCampusPicker((i) => switchCampus(i)));
     $('#mapExchangeBtn').addEventListener('click', exchange);
     $('#mapRouteBtn').addEventListener('click', formSubmit);
-    $('#mapLocationBtn').addEventListener('click', locateMe);
+    $('#mapLocationBtn').addEventListener('click', () => {
+      requestOrientationPermission();
+      if (!navigator.geolocation) {
+        showLocationError({ message: '当前浏览器不支持 Geolocation API' });
+        return;
+      }
+      toast('正在获取位置…');
+      // 已在跟随：重新取一次当前位置并居中，不重新开启定位
+      if (mapLocationWatching) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const [lat, lng] = toGcj(pos.coords.latitude, pos.coords.longitude);
+            locateAndCenter(lat, lng);
+            toast('已定位到当前位置', 1200);
+          },
+          handleLocError,
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
+        );
+        return;
+      }
+      startLocationWatch();
+    });
     $('#mapRestoreBtn').addEventListener('click', restore);
     $('#mapBottomBtn').addEventListener('click', clickMapBottom);
     $('#mapLayerToggle').addEventListener('click', (e) => {
@@ -811,16 +762,25 @@
     $$('.map-modes .mode').forEach((m) => m.addEventListener('click', () => modeChoose(m.dataset.mode)));
 
     applyCampus();
+    renderGuideRoute(mapCampusData());
+    initOrientation();
     locateMe();
+    startLocationWatch();
     syncMapInputs();
     setTimeout(() => { if (map) map.invalidateSize(); }, 60);
     setTimeout(() => { if (map) map.invalidateSize(); }, 350);
   }
 
   function applyCampus() {
-    const campus = MAP.site_data[state.choose];
+    const campus = mapCampusData();
     state.mapPoints = campus.range || [];
     state.mapDefaultPoint = defaultPointOf(campus);
+    // 切厂区时重置起终点，避免残留上一个厂区的点位
+    const def = state.mapDefaultPoint;
+    state.start = (def && def.latitude)
+      ? { name: def.name, latitude: def.latitude, longitude: def.longitude }
+      : { name: '', latitude: '', longitude: '' };
+    state.end = { name: '', latitude: '', longitude: '' };
     state.mapCategory = 0;
     state.route.polyline = null;
     state.route.duration = 0;
@@ -830,15 +790,17 @@
     renderCampusControl();
     renderCampusOverlay();
     renderCategoryMarkers();
+    state.appliedCampus = state.mapCampus;
     if (map) {
       map.setView([campus.latitude, campus.longitude], MAP.scale || 16);
     }
   }
 
   function renderCampusControl() {
-    $('#mapCampusWrap').style.display = MAP.site_data.length > 1 ? 'flex' : 'none';
-    $('#mapCampusBtn').textContent = state.campus_name_list[state.choose];
-    const cats = currentSiteData();
+    // 厂区由底部 tab（地图 / 青州地图）决定，地图页内不再重复放切换按钮
+    $('#mapCampusWrap').style.display = 'none';
+    $('#mapCampusBtn').textContent = mapCampusData().name || '';
+    const cats = mapSiteData();
     $('#mapCategories').innerHTML = cats.map((c, i) =>
       '<div class="map-cat' + (i === state.mapCategory ? ' choose' : '') + '" data-i="' + i + '">' + esc(c.name) + '</div>').join('');
     $$('#mapCategories .map-cat').forEach((el) => el.addEventListener('click', () => changeCategory(Number(el.dataset.i))));
@@ -878,7 +840,7 @@
   }
 
   function renderCampusOverlay() {
-    const campus = currentCampus();
+    const campus = mapCampusData();
     clearPointsTextLayers();
     if (groundOverlay) { map.removeLayer(groundOverlay); groundOverlay = null; }
     if (polygonLayer) { map.removeLayer(polygonLayer); polygonLayer = null; }
@@ -1060,13 +1022,14 @@
   function renderCategoryMarkers() {
     if (!markerLayer) return;
     markerLayer.clearLayers();
-    const cat = currentSiteData()[state.mapCategory];
+    const cat = mapSiteData()[state.mapCategory];
     if (!cat) return;
     const tone = markerToneOf(cat);
 
     let markers = [];
     const loc = (state.start && state.start.latitude) ? state.start : null;
-    if (loc) markers.push(formMarker(loc, 'location', -1));
+    // 起点即当前位置时由实时蓝点表示，不再重复画一个大头针
+    if (loc && loc.name !== '当前位置') markers.push(formMarker(loc, 'location', -1));
     cat.list.forEach((site, i) => {
       const isCurrent = loc && Math.abs(Number(site.latitude) - Number(loc.latitude)) < 0.000001 && Math.abs(Number(site.longitude) - Number(loc.longitude)) < 0.000001;
       if (!isCurrent) markers.push(formMarker(site, 'site', i + 1, tone, cat.name));
@@ -1075,19 +1038,12 @@
   }
 
   function markerToneOf(category) {
-    const tones = {
-      1: 'main',
-      2: 'nitrile',
-      3: 'pvc',
-      4: 'storage',
-      5: 'eco',
-      6: 'life',
-    };
-    return tones[category.id] || 'main';
+    const tones = { '丁腈车间': 'nitrile', 'PVC车间': 'pvc', '环保设施': 'eco', '生活配套': 'life' };
+    return tones[category.name] || 'main';
   }
 
   function formMarker(site, type, id, tone, categoryName) {
-    const label = type === 'location' ? '当前位置' : site.name;
+    const label = type === 'location' ? (site.name || '当前位置') : site.name;
     const toneClass = type === 'site' && tone ? ' tone-' + tone : '';
     const icon = L.divIcon({
       className: '',
@@ -1140,7 +1096,7 @@
 
   function openGuideDialog(site, categoryName) {
     if (!site) return;
-    const guide = AREA_GUIDES[categoryName] || AREA_GUIDES['主要地点'];
+    const guide = AREA_GUIDES[categoryName] || AREA_GUIDES['生活配套'];
     const stepsHtml = (guide.steps || []).map((s, i) =>
       '<div class="explain-step"><span class="step-num">' + String(i + 1).padStart(2, '0') + '</span>' +
       '<strong class="step-title">' + esc(s.t) + '</strong></div>'
@@ -1185,7 +1141,7 @@
 
   function fitMarkers(markers) {
     if (!markers.length) return;
-    const campus = currentCampus();
+    const campus = mapCampusData();
     const latlngs = (campus.range || []).map((p) => [p.latitude, p.longitude]);
     latlngs.push(...markers.map((m) => [m.site.latitude, m.site.longitude]));
     try {
@@ -1194,6 +1150,13 @@
   }
 
   function changeCategory(i) {
+    if (state.mapCategory === i) {
+      state.mapCategory = -1;
+      $$('#mapCategories .map-cat').forEach((el) => el.classList.remove('choose'));
+      if (markerLayer) markerLayer.clearLayers();
+      $('#mapBottomBtn').classList.add('hidden');
+      return;
+    }
     state.mapCategory = i;
     $$('#mapCategories .map-cat').forEach((el, k) => el.classList.toggle('choose', k === i));
     const el = $('#mapCategories .map-cat[data-i="' + i + '"]');
@@ -1237,13 +1200,14 @@
           const c = toMapCoords(pos.coords.latitude, pos.coords.longitude);
           apply(c.latitude, c.longitude);
         },
-        () => {
+        (err) => {
           state.mapIsAtSchool = false;
           const def = state.mapDefaultPoint;
           if (def) state.start = { name: def.name, latitude: def.latitude, longitude: def.longitude };
           syncMapInputs();
           renderCategoryMarkers();
-          toast('定位失败，默认位置设为' + (def ? def.name : '默认点'), 2000);
+          showLocationError(err);
+          toast('已使用默认位置：' + (def ? def.name : '默认点'), 2200);
         },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
       );
@@ -1252,7 +1216,8 @@
       if (def) state.start = { name: def.name, latitude: def.latitude, longitude: def.longitude };
       syncMapInputs();
       renderCategoryMarkers();
-      toast('设备不支持定位，默认位置设为' + (def ? def.name : '默认点'), 2000);
+      showLocationError({ message: '当前浏览器不支持 Geolocation API' });
+      toast('已使用默认位置：' + (def ? def.name : '默认点'), 2200);
     }
   }
 
@@ -1340,7 +1305,15 @@
   }
 
   function formSubmit() {
-    if (!state.end.name) { toast('请选择终点！'); return; }
+    if (!state.end.name) {
+      // 该厂区配了固定引导路线时，点「路线」直接看整条引导路线
+      if (guideRoutePoints.length >= 2) {
+        try { map.fitBounds(L.latLngBounds(guideRoutePoints).pad(0.15)); } catch (e) {}
+        return;
+      }
+      toast('请选择终点！');
+      return;
+    }
     const s = state.start, e = state.end;
     if (s.latitude === e.latitude && s.longitude === e.longitude) { toast('起点和终点不能相同'); return; }
     showRouteUI();
@@ -1472,9 +1445,12 @@
       hideRouteUI();
       renderCampusControl();
       renderCategoryMarkers();
-    } else {
-      renderCategoryMarkers();
+      return;
     }
+    // 无路线时：回到当前厂区的初始视角
+    const campus = mapCampusData();
+    if (map && campus) map.setView([campus.latitude, campus.longitude], campus.scale || MAP.scale || 16);
+    renderCategoryMarkers();
   }
 
   function clickMapBottom() {
@@ -1490,7 +1466,7 @@
   }
 
   function switchCampus(i) {
-    state.choose = i;
+    state.mapCampus = i;
     applyCampus();
     syncMapInputs();
     if (map) map.invalidateSize();
@@ -1499,8 +1475,9 @@
   function syncMapInputs() {
     $('#mapStartInput').value = state.start.name || '当前地点/起点';
     $('#mapEndInput').value = state.end.name || '请选择终点';
-    $('#mapStartInput').onclick = () => { state.searchTarget = 1; location.hash = '#/search?id=1'; };
-    $('#mapEndInput').onclick = () => { state.searchTarget = 0; location.hash = '#/search?id=0'; };
+    // 搜索页跟随当前地图 tab 的厂区
+    $('#mapStartInput').onclick = () => { state.choose = state.mapCampus; state.searchTarget = 1; location.hash = '#/search?id=1'; };
+    $('#mapEndInput').onclick = () => { state.choose = state.mapCampus; state.searchTarget = 0; location.hash = '#/search?id=0'; };
   }
 
   /* =========================================================
@@ -1588,7 +1565,8 @@
         if (state.searchTarget === 1) state.start = { name: p.name, latitude: p.latitude, longitude: p.longitude };
         else state.end = { name: p.name, latitude: p.latitude, longitude: p.longitude };
         hideSub();
-        location.hash = '#/map';
+        // 从「青州地图」发起的搜索，选完点后回到「青州地图」
+        location.hash = state.tab === 'qingzhou-map' ? '#/qingzhou-map' : '#/map';
         syncMapInputs();
       }));
     } else {

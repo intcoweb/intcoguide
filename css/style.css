@@ -466,11 +466,6 @@ button { font-family: inherit; }
   will-change: transform;
   backface-visibility: hidden;
 }
-.leaflet-container .qingzhou-map-overlay {
-  user-select: none;
-  -webkit-user-select: none;
-  pointer-events: none;
-}
 .leaflet-container .campus-map-overlay {
   user-select: none;
   -webkit-user-select: none;
@@ -481,18 +476,12 @@ button { font-family: inherit; }
   will-change: transform;
 }
 
-/* ===== 青州地图模块（可整段删除） ===== */
-.page-qingzhou-map { background: #dfe9e7; overflow: hidden; }
-#qingzhouMap { position: absolute; inset: 0; z-index: 1; }
-.qingzhou-map-top-card { z-index: 20; }
-.qingzhou-map-control { z-index: 18; }
-.qingzhou-map-tools { z-index: 20; }
-.qingzhou-map-bottom { z-index: 20; pointer-events: none; color: #31535e; }
-.qingzhou-route-arrow-icon {
+/* ===== 厂区固定引导路线箭头 ===== */
+.map-route-arrow-icon {
   background: transparent;
   border: 0;
 }
-.qingzhou-route-arrow-icon span {
+.map-route-arrow-icon span {
   display: flex;
   width: 18px;
   height: 18px;
@@ -506,64 +495,34 @@ button { font-family: inherit; }
   transform-origin: center;
 }
 
-/* 青州陀螺仪罗盘 */
-.qingzhou-compass {
-  position: absolute;
-  left: 12px;
-  bottom: 112px;
-  z-index: 21;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .94);
-  border: 1px solid rgba(255, 255, 255, .9);
-  box-shadow: 0 6px 15px rgba(26, 75, 81, .16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
+/* 用户当前位置 marker（实时蓝点，收到朝向后显示箭头） */
+.map-user-marker-icon {
+  position: relative;
+  background: transparent;
+  border: 0;
 }
-.qingzhou-compass-arrow {
+.map-user-marker-icon .user-heading {
   position: absolute;
   left: 50%;
   top: 50%;
   width: 0;
   height: 0;
-  transform-origin: center;
-  transition: transform .08s linear;
-}
-.qingzhou-compass-arrow .needle {
-  position: absolute;
-  left: -5px;
-  top: -22px;
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-bottom: 16px solid #ef4444;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 20px solid rgba(22, 119, 255, .9);
+  transform: translate(-50%, -100%) rotate(0deg);
+  transform-origin: 50% 100%;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .25));
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .12s ease;
+  z-index: 0;
 }
-.qingzhou-compass-deg {
-  position: absolute;
-  bottom: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #31535e;
-  letter-spacing: .5px;
+.map-user-marker-icon .user-heading.visible {
+  opacity: 1;
+  visibility: visible;
 }
-.qingzhou-map-tools .location svg {
-  width: 24px;
-  height: 24px;
-  display: block;
-}
-
-/* 青州用户当前位置 marker */
-.qingzhou-user-marker-icon {
-  position: relative;
-  background: transparent;
-  border: 0;
-}
-.qingzhou-user-marker-icon .user-dot {
+.map-user-marker-icon .user-dot {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -574,6 +533,7 @@ button { font-family: inherit; }
   background: #1677ff;
   border: 3px solid #fff;
   box-shadow: 0 0 0 3px rgba(22, 119, 255, .28), 0 2px 8px rgba(0, 0, 0, .28);
+  z-index: 1;
 }
 .map-right-tools {
   position: absolute;

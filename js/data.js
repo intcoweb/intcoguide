@@ -22,16 +22,8 @@ window.GLU_DATA = {
             "longitude": 116.726742
           },
           {
-            "latitude": 33.870782,
-            "longitude": 116.720085
-          },
-          {
-            "latitude": 33.874846,
-            "longitude":116.720309
-          },
-          {
-            "latitude": 33.875133,
-            "longitude":116.719738
+            "latitude": 33.87087,
+            "longitude": 116.7189
           },
           {
             "latitude": 33.877281,
@@ -43,7 +35,7 @@ window.GLU_DATA = {
           1
         ],
         "isUseMapImg": true,
-        "img": "assets/images/huai-bei-intco-map.jpg?v=20260911-1",
+        "img": "assets/images/huai-bei-intco-map.png?v=20260911-1",
         "rotation": 1,
         "bounds": {
           "opacity": 1,
@@ -55,36 +47,6 @@ window.GLU_DATA = {
         "category_list": [
           {
             "id": 1,
-            "name": "主要地点",
-            "list": [
-              {
-                "id": 2,
-                "name": "办公室",
-                "aliases": "",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区办公区域。",
-                "latitude": 33.8722432,
-                "longitude": 116.7259619,
-                // "points": [
-                //   [33.8732010,116.726444],
-                //   [33.872114,116.726413],
-                //   [33.872120,116.725741],
-                //   [33.873220,116.725807]
-                // ],
-              },
-              // {
-              //   "id": 3,
-              //   "name": "工厂大门",
-              //   "aliases": "主出入口",
-              //   "img": "assets/images/map_bottom1.png",
-              //   "desc": "厂区主要出入口。",
-              //   "latitude": 33.871931,
-              //   "longitude": 116.7266457
-              // },
-            ]
-          },
-          {
-            "id": 2,
             "name": "丁腈车间",
             "list": [
               {
@@ -93,14 +55,8 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "丁腈手套生产车间。",
-                // "points": [
-                //   [33.872038,116.723248],
-                //   [33.871493,116.723225],
-                //   [33.871544,116.72122],
-                //   [33.870912,116.721174],
-                //   [33.870938,116.720302],
-                //   [33.872137,116.720368],
-                // ],
+                "latitude": 33.8715103,
+                "longitude": 116.7215895
               },
               {
                 "id": 2,
@@ -108,14 +64,8 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "丁腈手套生产车间。",
-                // "latitude": "",
-                // "longitude": "",
-                // "points": [
-                //   [33.87357,116.723252],
-                //   [33.87312,116.723234],
-                //   [33.8732,116.720351],
-                //   [33.873658,116.720377]
-                // ],
+                "latitude": 33.8733870,
+                "longitude": 116.7218035
               },
               {
                 "id": 3,
@@ -123,17 +73,8 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "丁腈手套生产车间。",
-                "latitude": "",
-                "longitude": "",
-                // "points": [
-                //   [33.87435,116.723304],
-                //   [33.873735,116.723274],
-                //   [33.873779,116.72039],
-                //   [33.874767,116.720425],
-                //   [33.874739,116.721221],
-                //   [33.874399,116.721225],
-                //   [33.87435,116.723304],
-                // ],
+                "latitude": 33.8743027,
+                "longitude": 116.7218776
               },
               {
                 "id": 4,
@@ -141,27 +82,8 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "丁腈手套生产车间。",
-                "latitude": "",
-                "longitude": "",
-                // "points": [
-                //   [33.876207,116.723369],
-                //   [33.875657,116.723354],
-                //   [33.875723,116.7208],
-                //   [33.875068,116.720745],
-                //   [33.875088,116.719965],
-                //   [33.876279,116.720015],
-                //   [33.876207,116.723369],
-                // ],
-                "polygon": {
-                  "color": "#1d7a8c",
-                  "weight": 2.5,
-                  "fillColor": "#2a9fb8",
-                  "fillOpacity": 0.25,
-                  "labelColor": "#1d7a8c",
-                  "textColor": "#ffffff",
-                  "textBg": "rgba(23, 77, 104, 0.82)",
-                  "textSize": 12
-                }
+                "latitude": 33.8757470,
+                "longitude": 116.7216596
               },
               {
                 "id": 5,
@@ -184,7 +106,7 @@ window.GLU_DATA = {
             ]
           },
           {
-            "id": 3,
+            "id": 2,
             "name": "PVC车间",
             "list": [
               {
@@ -193,12 +115,8 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "PVC手套生产车间。",
-                // "points": [
-                //   [33.872704,116.725774],
-                //   [33.872120,116.725741],
-                //   [33.872197,116.723599],
-                //   [33.872713,116.723606],
-                // ],
+                "latitude": 33.8724335,
+                "longitude": 116.7246800
               },
               {
                 "id": 2,
@@ -206,12 +124,8 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "PVC手套生产车间。",
-                // "points": [
-                //   [33.873220,116.725807],
-                //   [33.872704,116.725774],
-                //   [33.872713,116.723606],
-                //   [33.873290,116.723645],
-                // ],
+                "latitude": 33.8729818,
+                "longitude": 116.7247080
               },
               {
                 "id": 3,
@@ -219,12 +133,8 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "PVC手套生产车间。",
-                // "points": [
-                //   [33.87134,116.726399],
-                //   [33.870806,116.726388],
-                //   [33.870849,116.723557],
-                //   [33.871389,116.723561],
-                // ],
+                "latitude": 33.8710960,
+                "longitude": 116.7249762
               },
               {
                 "id": 4,
@@ -232,113 +142,13 @@ window.GLU_DATA = {
                 "aliases": "",
                 "img": "assets/images/map_bottom1.png",
                 "desc": "PVC手套生产车间。",
-                // "points": [
-                //   [33.871856,116.726408],
-                //   [33.87134,116.726399],
-                //   [33.871389,116.723561],
-                //   [33.871913,116.723579],
-                // ],
+                "latitude": 33.8716245,
+                "longitude": 116.7249867
               }
             ]
           },
           {
-            "id": 4,
-            "name": "仓储与配料",
-            "list": [
-              {
-                "id": 1,
-                "name": "仓库",
-                "aliases": "成品及物料仓储",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区仓储区域。",
-                "latitude": 33.8755079,
-                "longitude": 116.7206964
-              },
-              {
-                "id": 2,
-                "name": "配料区",
-                "aliases": "生产配料区域",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "生产配料区域。",
-                "latitude": 33.8753943,
-                "longitude": 116.7234659
-              },
-              {
-                "id": 3,
-                "name": "危化品仓库",
-                "aliases": "危化品存储区域",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "危险化学品专用仓储区域。",
-                "latitude": 33.8763027,
-                "longitude": 116.7219273
-              },
-              {
-                "id": 4,
-                "name": "原料罐区",
-                "aliases": "原料存储区域",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "生产原料存储区域。",
-                "latitude": 33.8761324,
-                "longitude": 116.7230898
-              },
-              {
-                "id": 5,
-                "name": "氮气室",
-                "aliases": "气体供应设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区气体供应设施。",
-                "latitude": 33.8760472,
-                "longitude": 116.7239104
-              },
-              {
-                "id": 6,
-                "name": "变电所",
-                "aliases": "供电设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区供电设施。",
-                "latitude": 33.8760302,
-                "longitude": 116.7249019
-              },
-              {
-                "id": 7,
-                "name": "小料库",
-                "aliases": "辅料仓库",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "生产辅料仓储区域。",
-                "latitude": 33.8760756,
-                "longitude": 116.7254832
-              },
-              {
-                "id": 8,
-                "name": "锅炉房一",
-                "aliases": "动力设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区动力设施。",
-                "latitude": 33.8723568,
-                "longitude": 116.7233633
-              },
-              {
-                "id": 9,
-                "name": "锅炉房二",
-                "aliases": "动力设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区动力设施。",
-                "latitude": 33.8749685,
-                "longitude": 116.723124
-              },
-              {
-                "id": 10,
-                "name": "35KV变电站",
-                "aliases": "供电设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区高压供电设施。",
-                "latitude": 33.8711645,
-                "longitude": 116.7222692
-              }
-            ]
-          },
-          {
-            "id": 5,
+            "id": 3,
             "name": "环保设施",
             "list": [
               {
@@ -359,95 +169,95 @@ window.GLU_DATA = {
                 "latitude": 33.8739181,
                 "longitude": 116.72562
               },
-              {
-                "id": 3,
-                "name": "净化池",
-                "aliases": "环保处理设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区环保处理设施。",
-                "latitude": 33.8742304,
-                "longitude": 116.7222008
-              },
-              {
-                "id": 4,
-                "name": "水池",
-                "aliases": "厂区水务设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区水务设施。",
-                "latitude": 33.8740885,
-                "longitude": 116.7219
-              },
-              {
-                "id": 5,
-                "name": "垃圾处理站",
-                "aliases": "固废处理设施",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区垃圾处理设施。",
-                "latitude": 33.8745427,
-                "longitude": 116.7212777
-              },
-              {
-                "id": 6,
-                "name": "废品回收站",
-                "aliases": "回收处理区域",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "厂区废品回收区域。",
-                "latitude": 33.8740601,
-                "longitude": 116.7205255
-              }
             ]
           },
           {
-            "id": 6,
+            "id": 4,
             "name": "生活配套",
             "list": [
               {
                 "id": 1,
-                "name": "食堂",
-                "aliases": "员工餐饮区域",
+                "name": "公寓",
+                "aliases": "员工住宿区域",
                 "img": "assets/images/map_bottom1.png",
-                "desc": "员工用餐区域。",
-                "latitude": 33.8731517,
+                "desc": "员工住宿区域。",
+                "latitude": 33.8738756,
                 "longitude": 116.7264747
               },
               {
                 "id": 2,
-                "name": "公寓楼A",
-                "aliases": "员工住宿区域",
+                "name": "工厂大门",
+                "aliases": "主出入口",
                 "img": "assets/images/map_bottom1.png",
-                "desc": "员工住宿区域。",
-                "latitude": 33.8736343,
-                "longitude": 116.7264747
+                "desc": "厂区主要出入口。",
+                "latitude": 33.8719310,
+                "longitude": 116.7266457
               },
               {
                 "id": 3,
-                "name": "公寓楼B",
-                "aliases": "员工住宿区域",
+                "name": "办公室",
+                "aliases": "办公区域",
                 "img": "assets/images/map_bottom1.png",
-                "desc": "员工住宿区域。",
-                "latitude": 33.8741168,
-                "longitude": 116.7264747
+                "desc": "厂区办公区域。",
+                "latitude": 33.8722432,
+                "longitude": 116.7259619
               },
               {
                 "id": 4,
-                "name": "篮球场",
-                "aliases": "员工活动区域",
-                "img": "assets/images/map_bottom1.png",
-                "desc": "员工休闲活动区域。",
-                "latitude": 33.8713348,
-                "longitude": 116.7201494
-              },
-              {
-                "id": 5,
-                "name": "门卫室",
+                "name": "工厂门卫",
                 "aliases": "门岗管理",
                 "img": "assets/images/map_bottom1.png",
-                "desc": "厂区门岗管理区域。",
+                "desc": "厂区门岗与访客登记区域。",
                 "latitude": 33.8725555,
                 "longitude": 116.7266115
               }
             ]
           }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "青州英科医疗",
+        "longitude": 118.38438492,
+        "latitude": 36.76472325,
+        "scale": 16,
+        "range": [
+          { "latitude": 36.76873218, "longitude": 118.3804614 },
+          { "latitude": 36.76873218, "longitude": 118.3881691 },
+          { "latitude": 36.75901813, "longitude": 118.3881691 },
+          { "latitude": 36.75901813, "longitude": 118.3804614 }
+        ],
+        "site_id": [1, 1],
+        "isUseMapImg": true,
+        "img": "assets/images/qingzhou-intco-old-map.png?v=20260911-1",
+        "rotation": 0,
+        "bounds": {
+          "opacity": 1,
+          "east": 118.3881691,
+          "north": 36.76873218,
+          "south": 36.75901813,
+          "west": 118.3804614
+        },
+        // 厂区固定引导路线（不需要可整段删除）
+        "guide_route": [
+          [36.767321, 118.384215],
+          [36.766827, 118.384283],
+          [36.766688, 118.382893],
+          [36.765153, 118.382848],
+          [36.765126, 118.385274],
+          [36.764166, 118.385273],
+          [36.764152, 118.383295],
+          [36.764256, 118.383252],
+          [36.764248, 118.382672],
+          [36.765115, 118.382845],
+          [36.766665, 118.382866],
+          [36.766822, 118.384302]
+        ],
+        "category_list": [
+          { "id": 1, "name": "丁腈车间", "list": [] },
+          { "id": 2, "name": "PVC车间", "list": [] },
+          { "id": 3, "name": "环保设施", "list": [] },
+          { "id": 4, "name": "生活配套", "list": [] }
         ]
       }
     ]
