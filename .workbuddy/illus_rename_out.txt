@@ -1,0 +1,5 @@
+﻿sewage-illus.png
+coal-illus.png
+warehouse-illus.png
+restaurant-illus.png
+apartment-illus.png

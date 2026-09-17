@@ -1,0 +1,5 @@
+nitrile-plant.png: 1536x1024 2514KB -> 1536x944 2354KB
+pvc-plant.png: 1536x1024 2529KB -> 1536x944 2379KB
+sewage-plant.png: 1536x1024 2937KB -> 1536x944 2751KB
+coal-yard.png: 1536x1024 2689KB -> 1536x944 2501KB
+warehouse.png: 1536x1024 2771KB -> 1536x944 2621KB

@@ -1,0 +1,20 @@
+node --check exit=0 
+img refs count=16
+OK   assets/images/bases/guoyi-mold.webp
+OK   assets/images/bases/kaiser-latex.webp
+OK   assets/images/bases/yingcai-box.webp
+OK   assets/images/coal-illus.png
+OK   assets/images/exhibition.webp
+MISS assets/images/huai-bei-intco-map.png?v=20260911-1
+OK   assets/images/nitrile-entrance.png
+OK   assets/images/office.png
+OK   assets/images/pvc-entrance.png
+MISS assets/images/qingzhou-intco-old-map.png?v=20260911-1
+OK   assets/images/sewage-illus.png
+OK   assets/images/showroom.webp
+OK   assets/images/smoke-illus.png
+OK   assets/images/warehouse-illus.png
+MISS https://www.intcomedical.com.cn/
+MISS https://www.intcomedical.com/
+MISSING TOTAL = 4
+data.js cache version = 20260917-05

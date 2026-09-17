@@ -12,38 +12,25 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" />
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="css/style.css?v=20260912-9" />
+  <link rel="stylesheet" href="css/style.css?v=20260917-21" />
+  <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
 </head>
 <body>
   <div id="app">
     <!-- ======================= 地图 Tab ======================= -->
     <section class="page page-map" id="page-map">
-      <div class="map-top-card">
-        <div class="map-top-left">
-          <div class="map-field up">
-            <span class="dot start"></span>
-            <input class="map-input" id="mapStartInput" placeholder="当前地点/起点" readonly />
-          </div>
-          <div class="map-field">
-            <span class="dot end"></span>
-            <input class="map-input" id="mapEndInput" placeholder="请选择终点" readonly />
-          </div>
-        </div>
-        <div class="map-top-middle">
-          <button class="map-exchange" id="mapExchangeBtn" title="对调起点/终点">
-            <img src="https://lbs.gtimg.com/visual/miniprogram-plugin/route-planning/assets/exchange.png" alt="交换" />
-          </button>
-        </div>
-        <div class="map-top-right">
-          <button class="map-route-btn" id="mapRouteBtn">路线</button>
-        </div>
+      <!-- 当前基地名：点开可切换基地 -->
+      <div class="map-base-bar" id="mapCampusWrap">
+        <button class="map-base-btn" id="mapCampusBtn" type="button" aria-label="切换基地"></button>
       </div>
 
-      <!-- 厂区切换 + 分类栏（无路线时） -->
+      <div class="map-search-entry">
+        <input class="map-search-input" id="mapSearchInput" placeholder="搜索地点" autocomplete="off" />
+        <button class="map-search-btn" id="mapSearchBtn" type="button">搜索</button>
+      </div>
+
+      <!-- 分类栏（无路线时） -->
       <div class="map-control" id="mapControl">
-        <div class="map-campus-wrap" id="mapCampusWrap">
-          <button class="picker" id="mapCampusBtn"></button>
-        </div>
         <div class="map-categories" id="mapCategories"></div>
       </div>
 
@@ -65,28 +52,52 @@
         <div class="location" id="mapLocationBtn" title="定位">
           <img src="assets/images/location.png" alt="定位" />
         </div>
-        <button class="map-layer-toggle" id="mapLayerToggle" title="切换厂区示意图/真实地图">示意图</button>
+        <button class="location orientation-permission" id="mapOrientationBtn" title="朝向权限申请" type="button" aria-label="朝向权限申请">
+          <svg class="orientation-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.7" />
+            <path d="M16.1 7.9 13.3 13.3 7.9 16.1 10.7 10.7z" fill="currentColor" />
+            <path d="M7.9 16.1 10.7 10.7 13.3 13.3z" fill="currentColor" opacity=".38" />
+          </svg>
+        </button>
+        <button class="map-layer-toggle" id="mapLayerToggle" title="切换厂区示意图/真实地图"><span class="lt-line">真实</span><span class="lt-line">地图</span></button>
       </div>
 
       <!-- 底部按钮 -->
       <div class="map-bottom hidden" id="mapBottomBtn"></div>
+
+      <!-- iOS 方向权限引导：iOS 要求「页面内的一次手势」才能申请设备朝向，
+           首次进入时给一个显眼入口，用户不必去找右侧的小按钮 -->
+      <button class="map-orient-hint" id="mapOrientHint" type="button">
+        <svg class="map-orient-hint-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" />
+          <path d="M16 8 13.4 13.4 8 16 10.6 10.6z" fill="currentColor" />
+        </svg>
+        <span class="map-orient-hint-text">轻触屏幕，开启方向指引</span>
+        <span class="map-orient-hint-go">开启</span>
+      </button>
     </section>
 
-    <!-- ======================= 地点汇总 Tab ======================= -->
+    <!-- ======================= 基地介绍 Tab ======================= -->
     <section class="page page-site" id="page-site">
-      <div class="site-head">
-        <div class="site-head-bg"></div>
-        <div class="site-head-content">
-          <div class="site-head-meta">
-            <span class="site-eyebrow">FACILITY DIRECTORY</span>
-            <h1 class="site-head-title">厂区点位导航</h1>
-            <p class="site-head-sub">按分类浏览厂区全部设施</p>
-          </div>
-          <div class="site-campus" id="siteCampusWrap">
-            <button class="picker" id="siteCampusBtn"></button>
+      <!-- 厂区 Hero：原「首页」顶部区块，现置于基地介绍页最上方 -->
+      <div class="home-hero">
+        <div class="hero-bg"></div>
+        <span class="hero-orb orb-a"></span>
+        <span class="hero-orb orb-b"></span>
+        <span class="hero-orb orb-c"></span>
+        <div class="hero-shine"></div>
+        <div class="hero-top">
+          <span class="hero-eyebrow"><i></i>INTCO MEDICAL · 智慧园区</span>
+          <div class="hero-campus" id="siteCampusWrap">
+            <button class="picker" id="siteCampusBtn" type="button"></button>
           </div>
         </div>
+        <h1 class="home-school-name" id="heroSchoolName"></h1>
+        <div class="home-english" id="heroEnglish"></div>
+        <div class="hero-tags" id="heroTags"></div>
+        <div class="hero-quote" id="heroMotto"></div>
       </div>
+
       <div class="site-body">
         <div class="site-left" id="siteLeft"></div>
         <div class="site-right">
@@ -98,47 +109,6 @@
           <div class="site-content" id="siteContent"></div>
         </div>
       </div>
-    </section>
-
-    <!-- ======================= 首页 Tab ======================= -->
-    <section class="page page-home" id="page-home">
-      <div class="home-hero">
-        <div class="hero-bg"></div>
-        <span class="hero-orb orb-a"></span>
-        <span class="hero-orb orb-b"></span>
-        <span class="hero-orb orb-c"></span>
-        <div class="hero-shine"></div>
-        <div class="hero-top">
-          <span class="hero-eyebrow"><i></i>INTCO MEDICAL · 智慧园区</span>
-          <button class="hero-link" id="homeLabel" type="button"><i></i><span>厂区简介</span></button>
-        </div>
-        <h1 class="home-school-name" id="homeSchoolName"></h1>
-        <div class="home-english" id="homeEnglish"></div>
-        <div class="hero-tags" id="homeTags"></div>
-        <div class="hero-quote" id="homeMotto"></div>
-      </div>
-
-      <section class="home-weather-panel" aria-label="园区天气">
-        <div class="weather-panel-head">
-          <div>
-            <span class="weather-title-kicker">实时环境</span>
-            <h2>园区天气</h2>
-          </div>
-          <span class="weather-live"><i></i>实时更新</span>
-        </div>
-        <div class="weather-card" id="weatherCard"></div>
-      </section>
-
-      <div class="home-info" id="homeInfo"></div>
-
-      <div class="home-banner" id="homeBanner"></div>
-
-      <div class="home-card">
-        <div class="home-card-title"><span class="title-ic">⚡</span>常用功能</div>
-        <div class="home-functions" id="homeFunctions"></div>
-      </div>
-
-      <div class="home-footer" id="homeFooter"></div>
     </section>
 
     <!-- ======================= 子页面（覆盖层） ======================= -->
@@ -179,17 +149,11 @@
     <!-- 底部 TabBar -->
     <nav class="tabbar" id="tabbar">
       <a class="tab-item" data-route="#/map">
-        <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="地图" /><span>地图</span>
+        <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="地图讲解" /><span>地图讲解</span>
       </a>
-      <!-- 青州地图入口：与「地图」共用同一套实现，只切换厂区数据 -->
-      <a class="tab-item" data-route="#/qingzhou-map">
-        <img class="tab-icon" src="assets/images/tabbar/icon_map.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="青州地图" /><span>青州地图</span>
-      </a>
+      <!-- 「青州地图」tab 已移除：基地切换改由地图页顶部胶囊 / 基地介绍页右上角承担 -->
       <a class="tab-item" data-route="#/site">
-        <img class="tab-icon" src="assets/images/tabbar/icon_collection.png" data-alt="assets/images/tabbar/icon_collection_HL.png" alt="地点汇总" /><span>地点汇总</span>
-      </a>
-      <a class="tab-item" data-route="#/home">
-        <img class="tab-icon" src="assets/images/tabbar/icon_home.png" data-alt="assets/images/tabbar/icon_home_HL.png" alt="首页" /><span>首页</span>
+        <img class="tab-icon" src="assets/images/tabbar/icon_collection.png" data-alt="assets/images/tabbar/icon_collection_HL.png" alt="基地介绍" /><span>基地介绍</span>
       </a>
     </nav>
 
@@ -209,7 +173,8 @@
   </div>
 
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/data.js?v=20260912-9"></script>
-  <script src="js/app.js?v=20260912-9"></script>
+    <script src="js/data.js?v=20260917-05"></script>
+    <script src="assets/audio/guides/manifest.js?v=20260916-1"></script>
+    <script src="js/app.js?v=20260917-29"></script>
 </body>
 </html>

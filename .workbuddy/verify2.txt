@@ -1,0 +1,6 @@
+﻿sewage-illus.png -> 200 image/png
+coal-illus.png -> 200 image/png
+warehouse-illus.png -> 200 image/png
+restaurant-illus.png -> 200 image/png
+apartment-illus.png -> 200 image/png
+served data.js has all 5 illus refs: True

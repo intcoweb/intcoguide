@@ -1,0 +1,5 @@
+﻿CHECK=0
+nitrile-entrance.png -> 200
+pvc-entrance.png -> 200
+office-illus.png -> 200
+data.js served contains nitrile-entrance: True

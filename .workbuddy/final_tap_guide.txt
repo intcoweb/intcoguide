@@ -1,0 +1,16 @@
+transform: translate(0 -0.5) rotate(90 12 12)
+path 与线上一致: True
+24 画布 bbox: x 3.00..21.00  y 4.50..19.50
+指尖（最右点）: (21.00, 11.00)   [最右端 y 跨度 9.81..12.19]
+11px 图标内的指尖: (9.625, 5.042) px
+波纹盒子 left/top = 7.125 / 2.600，宽 5.00 → 弧心 (9.625, 5.100)
+弧心 - 指尖 = (+0.000, +0.058) px  → OK
+波纹只留右边框（开口弧）: True
+波纹不是闭环: True
+两个波纹错峰: True
+手指轻推动画: True
+降级分支保留静止波纹: True
+label-tap 已改为容器: True
+JS 里 label-tap 是 span 容器: True
+JS 里两个波纹元素: True
+定稿图: final_tap_guide.png

@@ -8,6 +8,27 @@
   const SCHOOL = D.school;
   const MEDIA = D.media;
   const MINI_NAME = DATA.miniprogram_name;
+  const APP_VERSION = '20260916-02';
+
+  let vConsole = null;
+  try {
+    if (typeof window.VConsole === 'function') {
+      vConsole = new window.VConsole({ theme: 'dark' });
+    }
+  } catch (error) {
+    console.warn('[朝向调试] vConsole 初始化失败', error);
+  }
+
+  const orientationDebug = (...args) => console.log('[朝向调试]', `版本 ${APP_VERSION}`, ...args);
+  const orientationDebugWarn = (...args) => console.warn('[朝向调试]', `版本 ${APP_VERSION}`, ...args);
+  const locationDebug = (...args) => console.log('[定位调试]', `版本 ${APP_VERSION}`, ...args);
+  const locationDebugWarn = (...args) => console.warn('[定位调试]', `版本 ${APP_VERSION}`, ...args);
+  orientationDebug('调试初始化', {
+    version: APP_VERSION,
+    vConsoleLoaded: Boolean(vConsole),
+    userAgent: navigator.userAgent,
+    secureContext: window.isSecureContext,
+  });
 
   const AREA_GUIDES = {
     '丁腈车间': {
@@ -26,22 +47,32 @@
         { t: '冷却包装', d: '冷却、脱模后分拣包装。' }
       ]
     },
-    '环保设施': {
-      en: 'ENVIRONMENT', subtitle: '绿色环保处理系统',
+    /* 兜底项：地图页的「生产车间」是把丁腈/PVC 两个车间合并出来的展示分类，
+       正常路径下点位会带 _catName 走各自原分类的配置，走不到这里。
+       留着是为了避免误落到「生活配套」那套（它 hideVoice，会藏掉语音按钮）。 */
+    '生产车间': {
+      en: 'PRODUCTION / WORKSHOP', subtitle: '手套生产车间',
       steps: [
-        { t: '集中收集', d: '生产废水经管网集中收集。' },
-        { t: '净化处理', d: '通过沉淀、生化等工艺净化水质。' },
-        { t: '循环利用', d: '达标后回用或合规排放，践行绿色生产。' }
+        { t: '配料投料', d: '按配方进行原料配料与投料。' },
+        { t: '浸渍成型', d: '生产线完成手套浸渍、成型。' },
+        { t: '烘干包装', d: '烘干、脱模后检验并包装入库。' }
       ]
     },
+    '展厅': {
+      en: 'EXHIBITION HALL', subtitle: '集团展厅 · 参观起点', hideSteps: true,
+      steps: []
+    },
+    '环保仓储': {
+      en: 'ENVIRONMENT / STORAGE', subtitle: '环保设施与仓储区域', hideSteps: true,
+      steps: []
+    },
     '生活配套': {
-      en: 'LIFE / AREA', subtitle: '员工生活服务区',
-      steps: [
-        { t: '住宿区域', d: '公寓为员工提供住宿服务。' },
-        { t: '进出厂区', d: '从工厂大门进出并按要求登记。' },
-        { t: '办公区域', d: '办公室提供日常行政与接待服务。' },
-        { t: '门岗登记', d: '工厂门卫负责访客登记与进出管理。' }
-      ]
+      en: 'LIFE / AREA', subtitle: '员工生活服务区', hideSteps: true, hideVoice: true,
+      steps: []
+    },
+    '配套基地': {
+      en: 'UPSTREAM / SUPPLY', subtitle: '全产业链上游配套基地', hideSteps: true, hideVoice: true,
+      steps: []
     }
   };
 
@@ -97,7 +128,8 @@
     $('#modalMask').classList.remove('show');
     $('#modalBox').classList.remove('explain-mode');
     modalAction = null;
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); stopTtsKeepAlive(); }
+    stopGuideAudio();
   }
   $('#modalMask').addEventListener('click', (e) => { if (e.target === $('#modalMask')) hideModal(); });
 
@@ -108,7 +140,7 @@
 
   /* ---------- 全局共享状态 ---------- */
   const state = {
-    tab: 'home',
+    tab: 'map',
     sub: null,
     choose: 0,             // 园区索引
     campus_list: [],
@@ -116,13 +148,14 @@
     start: { name: '', latitude: '', longitude: '' },
     end: { name: '', latitude: '', longitude: '' },
     mode: 'walking',
-    mapCategory: 1,
+    mapCategory: 0,        // 0 = 「全部」（虚拟分类，见 mapDisplayCategories）
     mapIsAtSchool: false,
     mapDefaultPoint: null,
     mapPoints: [],
     mapInited: false,
-    mapCampus: 0,        // 地图页当前厂区（0=淮北 1=青州）
-    appliedCampus: -1,   // 已经渲染到地图上的厂区
+    campus: 0,           // 当前基地（0=淮北 1=青州）—— 地图页与基地介绍页共用
+    appliedCampus: -1,   // 已经渲染到地图上的基地
+    campusResolved: false, // 定位后是否已按电子围栏判过基地（防止 watch 反复抢回用户手动选的基地）
     showMapImg: true,
     route: {
       polyline: null,     // Leaflet polyline
@@ -135,22 +168,113 @@
     panoIndex: 0,
     searchTarget: 0,
     searchContent: '',
+    searchAutoRun: false,
+    focusPoint: null,    // 搜索页「定位」待落地的目标点位（回到地图页后消费）
+    focusLock: 0,        // 刚定位过的时间戳：短暂屏蔽 watchPosition 首次居中，别把视角抢走
     siteCategory: 0,
   };
 
   /* ---------- 园区数据辅助 ---------- */
   function currentCampus() {
-    return MAP.site_data[state.choose] || MAP.site_data[0];
+    return MAP.site_data[state.campus] || MAP.site_data[0];
   }
-  /* 地图页当前厂区：由底部 tab（地图 / 青州地图）决定 */
+  /* 地图页当前基地：与基地介绍页共用 state.campus */
   function mapCampusData() {
-    return MAP.site_data[state.mapCampus] || MAP.site_data[0];
+    return MAP.site_data[state.campus] || MAP.site_data[0];
   }
+  /* 基地显示名：取 data.js 的 base_name（如「英科医疗淮北基地」），缺省退回厂区名 */
+  function campusLabel(campus) {
+    return (campus && (campus.base_name || campus.name)) || '';
+  }
+  /* 地图页分类合并规则：把若干细分车间在「地图页」合成一个分类展示。
+     ⚠️ 只作用在地图侧（mapSiteData 的派生结果），data.js 原始分类不动，
+     所以基地介绍页仍是「丁腈车间 / PVC车间」两个分类。
+     合并出来的点位会挂 _catName = 来源分类名：弹窗文案（openGuideDialog 按分类名取
+     AREA_GUIDES）与标记配色（markerToneOf）仍按各自原分类走 ——
+     即「生产车间」里丁腈线的点是青色、PVC线的点仍是原来的颜色。
+     id 取该组第一个来源分类的位置，用不到分类 id 的地方不受影响。 */
+  const MAP_CATEGORY_MERGE = [
+    { id: 7, name: '生产车间', from: ['丁腈车间', 'PVC车间'] },
+  ];
   function mapSiteData() {
-    return mapCampusData().category_list || [];
+    // siteOnly 分类（如「配套基地」）只服务基地介绍页，无坐标，
+    // 不进地图分类条/标记，也不进路线规划的搜索池
+    const real = (mapCampusData().category_list || []).filter((c) => !c.siteOnly);
+    const out = [];
+    const done = {};
+    real.forEach((c) => {
+      const rule = MAP_CATEGORY_MERGE.filter((r) => r.from.indexOf(c.name) !== -1)[0];
+      if (!rule) { out.push(c); return; }
+      if (done[rule.name]) return;   // 同一组的第二个来源分类：点位已在上面收走，跳过
+      done[rule.name] = true;
+      const list = [];
+      rule.from.forEach((fname) => {
+        const src = real.filter((x) => x.name === fname)[0];
+        ((src && src.list) || []).forEach((p) => list.push(Object.assign({}, p, { _catName: fname })));
+      });
+      // 占位沿用该组第一个来源分类原本的位置，保持分类条顺序稳定
+      out.push({ id: rule.id, name: rule.name, merged: true, from: rule.from.slice(), list: list });
+    });
+    return out;
   }
+  /* 地图分类展示列表 = 「全部」虚拟分类 + 真实分类（已按合并规则分组）。
+     虚拟分类不改动原始数据：点位浅拷贝并挂 _catName 记住来源分类，
+     这样弹窗（AREA_GUIDES 按分类名取）与标记配色仍按各自的真实分类走。
+     仅用于地图页的分类条与标记渲染；基地介绍页仍用真实分类。 */
+  const ALL_CATEGORY_NAME = '全部';
+  function mapDisplayCategories() {
+    const real = mapSiteData();
+    const all = [];
+    real.forEach((c) => {
+      (c.list || []).forEach((p) => {
+        // 合并分类的点已自带 _catName（来源分类），不能被「生产车间」覆盖 ——
+        // 否则弹窗会退化成生产车间兜底配置、标记也会丢掉原配色
+        all.push(Object.assign({}, p, { _catName: p._catName || c.name }));
+      });
+    });
+    return [{ id: 0, name: ALL_CATEGORY_NAME, list: all, virtual: true }].concat(real);
+  }
+  /* 点位在「地图分类条」（mapDisplayCategories）里的下标。
+     只认真实分类：下标 0 是虚拟的「全部」，它的池子里装着所有点位，
+     不跳过的话任何点位都会命中 0，切分类就永远不生效了（地图上也就看不到那个标记）。
+     合并分类（生产车间）里的点要按来源分类名（_catName）匹配，否则会漏；找不到返回 -1。 */
+  function displayCategoryIndexFor(site, catName) {
+    if (!site) return -1;
+    const cats = mapDisplayCategories();
+    const key = catName || '';
+    for (let i = 0; i < cats.length; i++) {
+      if (cats[i].virtual) continue;
+      const list = cats[i].list || [];
+      for (let k = 0; k < list.length; k++) {
+        if (list[k].name !== site.name) continue;
+        if (!key || (list[k]._catName || cats[i].name) === key) return i;
+      }
+    }
+    return -1;
+  }
+  /* 「定位」后的地图缩放级别：比厂区总览（MAP.scale）近一档，够看清是哪个点位 */
+  const FOCUS_ZOOM = 18;
   function currentSiteData() {
     return currentCampus().category_list || [];
+  }
+  // 默认起点（工厂大门）：已从点位列表移除，此处保留坐标作为默认「当前位置」。
+  // 展示字段（aliases/img/desc）必须一起给 —— 否则点开弹窗顶部 hero 区没有图，
+  // 与展厅等正常点位不一致（且标题下副标题、正文简介都会空）。
+  const DEFAULT_GATE_POINT = {
+    name: '工厂大门',
+    aliases: '厂区主入口',
+    img: 'assets/images/exhibition.webp',
+    desc: '厂区主出入口（工厂大门），来访车辆与人员由此进出，按要求登记停放。' +
+      '厂区地址：安徽省淮北市濉溪县濉芜经济开发区海棠南路6号。',
+    latitude: 33.8728310,
+    longitude: 116.7269957,
+  };
+  // 兜底 hero 图：任何缺 img 的点位都不至于开一个空白弹窗
+  const DEFAULT_SITE_IMG = 'assets/images/exhibition.webp';
+  // 由默认点位生成 state.start。**必须整体拷贝**，只取 name/lat/lng 会把展示字段丢掉，
+  // 结果就是「工厂大门」点开没图。（历史上 4 处赋值都曾只取三个字段。）
+  function defaultStartOf(def) {
+    return (def && def.latitude) ? Object.assign({}, def) : { name: '', latitude: '', longitude: '' };
   }
   function defaultPointOf(campus) {
     const c = campus || currentCampus();
@@ -163,31 +287,28 @@
     const cat = c.site_id ? cats.find((x) => x.id === c.site_id[0]) : null;
     const linked = cat && cat.list && cat.list.find((x) => x.id === c.site_id[1]);
     if (linked && linked.name === '工厂大门') return linked;
-    if (Number.isFinite(Number(c.latitude)) && Number.isFinite(Number(c.longitude))) {
-      return {
-        name: '厂区中心',
-        latitude: Number(c.latitude),
-        longitude: Number(c.longitude),
-      };
-    }
+    // 列表中没有大门点位时，回退到厂区默认大门坐标
+    if (c.id === 1 && (c.name || '').indexOf('安徽') >= 0) return { ...DEFAULT_GATE_POINT };
     return null;
   }
 
   /* =========================================================
      路由
      ========================================================= */
-  const TAB_ROUTES = ['map', 'qingzhou-map', 'site', 'home'];
+  const TAB_ROUTES = ['map', 'qingzhou-map', 'site'];
 
   function setActiveTab(tab) {
     state.tab = tab;
     $$('.page').forEach((p) => p.classList.remove('active'));
-    // 「地图」与「青州地图」共用同一个页面，只是厂区数据不同
+    // 「地图」与「青州地图」共用同一个页面，只是基地数据不同
     const pageId = (tab === 'qingzhou-map') ? 'map' : tab;
     const page = $('#page-' + pageId);
     if (page) page.classList.add('active');
 
+    // 底部「青州地图」tab 已移除：深链 #/qingzhou-map 时高亮「地图」
+    const activeRoute = '#/' + ((tab === 'qingzhou-map') ? 'map' : tab);
     $$('.tab-item').forEach((t) => {
-      const active = t.dataset.route === '#/' + tab;
+      const active = t.dataset.route === activeRoute;
       t.classList.toggle('active', active);
       const img = $('img', t);
       if (img) img.src = active ? (img.dataset.alt || img.src) : img.src.replace('_HL', '');
@@ -207,8 +328,8 @@
 
   // 根据 hash 导航
   function navigate(hash) {
-    let h = hash || location.hash || '#/home';
-    if (h.indexOf('#/') !== 0) h = '#/home';
+    let h = hash || location.hash || '#/map';
+    if (h.indexOf('#/') !== 0) h = '#/map';
     const parts = h.slice(2).split('?');
     const name = parts[0];
     const query = {};
@@ -221,14 +342,19 @@
     if (TAB_ROUTES.includes(name)) {
       hideSub();
       setActiveTab(name);
-      if (name === 'map') { state.mapCampus = 0; onMapShow(); }
-      if (name === 'qingzhou-map') { state.mapCampus = 1; onMapShow(); }
+      // 基地索引已统一到 state.campus：进地图页不再强制回淮北，
+      // 这样在基地介绍页切了基地、再回地图，看到的还是同一个基地。
+      if (name === 'qingzhou-map') state.campus = 1;
+      if (name === 'map' || name === 'qingzhou-map') onMapShow();
       if (name === 'site') onSiteShow();
-      if (name === 'home') onHomeShow();
     } else if (name === 'search') {
       state.searchTarget = Number(query.id) || 0;
       showSub('search');
       renderSearch();
+      if (state.searchAutoRun) {
+        state.searchAutoRun = false;
+        goSearch();
+      }
     } else if (name === 'instruction') {
       showSub('instruction');
       renderInstruction(query.name);
@@ -239,9 +365,10 @@
       showSub('pano');
       renderPano();
     } else {
+      // 未知路由一律回到地图（原默认路由 #/home 已随「首页」模块移除）
       hideSub();
-      setActiveTab('home');
-      onHomeShow();
+      setActiveTab('map');
+      onMapShow();
     }
   }
 
@@ -256,77 +383,22 @@
   }));
 
   /* =========================================================
-     首页
+     厂区 Hero（原「首页」模块，现已并入基地介绍页顶部）
      ========================================================= */
-  let homeRendered = false;
-  function onHomeShow() {
-    if (homeRendered) return;
-    homeRendered = true;
-    renderHome();
-  }
-  function renderHome() {
+  function renderSiteHero() {
     const si = SCHOOL.school_information;
-    const labelSpan = $('#homeLabel span');
-    if (labelSpan) labelSpan.textContent = '厂区简介';
-    $('#homeSchoolName').textContent = si.home_title || si.school_name_full;
-    $('#homeEnglish').textContent = si.school_name_English_full || 'ANHUI INTCO MEDICAL';
+    $('#heroSchoolName').textContent = si.home_title || si.school_name_full;
+    $('#heroEnglish').textContent = si.school_name_English_full || 'ANHUI INTCO MEDICAL';
 
     // 荣誉 / 上市标签
-    $('#homeTags').innerHTML =
+    $('#heroTags').innerHTML =
       '<span class="tag tag-accent">' + esc(si.honor) + '</span>' +
       '<span class="tag">股票代码 300677</span>';
 
-    // 企业使命
-    $('#homeMotto').innerHTML =
+    // 基地简介
+    $('#heroMotto').innerHTML =
       '<span class="quote-label">基地简介</span>' +
       '<p class="quote-text">' + esc(si.home_intro || si.motto) + '</p>';
-
-    // 数据速览
-    $('#homeInfo').innerHTML =
-      '<div class="quick-grid">' +
-      '<div class="quick"><span class="quick-label">建立时间</span><strong>' + esc(si.build_time) + '</strong></div>' +
-      '<div class="quick"><span class="quick-label">企业类型</span><strong>' + esc(si.school_type) + '</strong></div>' +
-      '<div class="quick"><span class="quick-label">业务领域</span><strong>' + esc(si.institution_type) + '</strong></div>' +
-      '<div class="quick"><span class="quick-label">所在地</span><strong>安徽 · 淮北</strong></div>' +
-      '</div>' +
-      '<div class="quick-addr"><img src="' + asset(MEDIA.little_location) + '" alt="" /><span>' + esc(si.location) + '</span></div>';
-
-    // 欢迎条
-    $('#homeBanner').innerHTML =
-      '<img class="banner-ic" src="' + asset(MEDIA.laba) + '" alt="" /><span>欢迎使用' + esc(MINI_NAME) + '小程序</span>';
-
-    // 常用功能
-    const funcConf = [
-      { icon: '🧭', label: '地图导航', sub: '厂区路径 · 规划路线', grad: 'orange', act: () => { location.hash = '#/map'; } },
-      { icon: '🏭', label: '厂区地图', sub: '全厂点位 · 一键找点', grad: 'teal', act: () => { location.hash = '#/site'; } },
-      { icon: '🌐', label: '英文官网', sub: 'INTCO Medical · Global', grad: 'blue', act: () => openLink('https://www.intcomedical.com') },
-      { icon: '🌏', label: '中文官网', sub: '英科医疗 · 官网', grad: 'green', act: () => openLink('https://www.intcomedical.com.cn') },
-    ];
-    $('#homeFunctions').innerHTML = funcConf.map((f, i) =>
-      '<button class="func-card grad-' + f.grad + '" data-i="' + i + '">' +
-      '<span class="func-card-icon">' + f.icon + '</span>' +
-      '<span class="func-card-label">' + esc(f.label) + '</span>' +
-      '<span class="func-card-sub">' + esc(f.sub) + '</span>' +
-      '</button>').join('');
-    $$('#homeFunctions .func-card').forEach((btn) => {
-      const idx = Number(btn.dataset.i);
-      btn.addEventListener('click', () => funcConf[idx] && funcConf[idx].act());
-    });
-
-    // 厂区简介跳转
-    $('#homeLabel').addEventListener('click', () => { location.hash = '#/introduction'; });
-
-    // 页脚
-    $('#homeFooter').textContent = MINI_NAME + ' · 智慧厂区服务';
-
-    // 获取天气
-    fetchWeather();
-  }
-
-  /* ---- 打开外部官网 ---- */
-  function openLink(url) {
-    const win = window.open(url, '_blank', 'noopener');
-    if (!win) location.href = url;
   }
 
   /* ---- 友情链接弹窗 ---- */
@@ -340,53 +412,8 @@
     $$('.link-item', $('#modalBody')).forEach((el) => el.addEventListener('click', () => previewImage(el.dataset.img)));
   }
 
-  /* ---- 天气 ---- */
-  async function fetchWeather() {
-    const loc = parseFloat(MAP.longitude).toFixed(2) + ',' + parseFloat(MAP.latitude).toFixed(2);
-    try {
-      const res = await fetch('https://devapi.qweather.com/v7/weather/now?location=' + loc + '&key=' + DATA.weatherKey);
-      const j = await res.json();
-      if (j && j.now) { renderWeather(j.now); return; }
-      throw new Error('bad');
-    } catch (e) {
-      try {
-        const r2 = await fetch('/api/weather');
-        const j2 = await r2.json();
-        if (j2 && j2.now) { renderWeather(j2.now); return; }
-      } catch (e2) {}
-      renderWeather(null);
-    }
-  }
-  function renderWeather(now) {
-    const si = SCHOOL.school_information;
-    const card = $('#weatherCard');
-    const hasWeather = Boolean(now);
-    const icon = hasWeather ? 'https://icons.qweather.com/assets/icons/' + now.icon + '.svg' : '';
-    const conditionIcon = hasWeather
-      ? '<img class="icon" src="' + esc(icon) + '" alt="' + esc(now.text) + '" />'
-      : '<div class="weather-empty-icon">—</div>';
-    const wind = hasWeather ? esc(now.windDir) + ' ' + esc(now.windScale) + '级' : '--';
-    const humidity = hasWeather ? esc(now.humidity) + '%' : '--';
-    const pressure = hasWeather ? esc(now.pressure) + ' hPa' : '--';
-    const feelsLike = hasWeather && now.feelsLike ? '体感 ' + esc(now.feelsLike) + '°C' : (hasWeather ? '实时观测' : '稍后自动重试');
-    card.innerHTML =
-      '<div class="weather-card-content">' +
-      '<div class="weather-location"><span class="weather-label">当前厂区</span><strong>' + esc(si.location) + '</strong></div>' +
-      '<div class="weather-summary">' +
-      '<div class="weather-temp"><span>' + (hasWeather ? esc(now.temp) : '--') + '</span><sup>°C</sup></div>' +
-      '<div class="weather-condition">' + conditionIcon + '<div class="weather-condition-copy"><strong>' + (hasWeather ? esc(now.text) : '天气暂不可用') + '</strong><span>' + feelsLike + '</span></div></div>' +
-      '</div>' +
-      '<div class="weather-info">' +
-      '<div class="weather-metric"><span>风力</span><strong>' + wind + '</strong></div>' +
-      '<div class="weather-metric"><span>湿度</span><strong>' + humidity + '</strong></div>' +
-      '<div class="weather-metric"><span>气压</span><strong>' + pressure + '</strong></div>' +
-      '</div>' +
-      '</div>' +
-      '<img class="weather-wave" src="' + asset(MEDIA.wave) + '" alt="" />';
-  }
-
   /* =========================================================
-     地点汇总 Tab
+     基地介绍 Tab
      ========================================================= */
   let siteRendered = false;
   function onSiteShow() {
@@ -402,28 +429,25 @@
   function updateSiteCampusBtn() {
     if (MAP.site_data.length > 1) {
       $('#siteCampusWrap').style.display = 'block';
-      $('#siteCampusBtn').textContent = state.campus_name_list[state.choose];
+      $('#siteCampusBtn').textContent = state.campus_name_list[state.campus];
     } else {
       $('#siteCampusWrap').style.display = 'none';
     }
   }
   function initSite() {
+    renderSiteHero();
     state.campus_list = MAP.site_data.map((s) => ({ id: s.id, name: s.name }));
     state.campus_name_list = MAP.site_data.map((s) => s.name);
     updateSiteCampusBtn();
-    $('#siteCampusBtn').addEventListener('click', () => showCampusPicker((i) => {
-      state.choose = i;
-      state.siteCategory = 0;
-      updateSiteCampusBtn();
-      renderSiteCategory();
-    }));
+    // 与地图页顶部胶囊共用 switchCampus：切一次，两页一起变
+    $('#siteCampusBtn').addEventListener('click', () => showCampusPicker((i) => switchCampus(i)));
     renderSiteCategory();
   }
   function renderSiteCategory() {
     const data = currentSiteData();
     const cat = data[state.siteCategory] || data[0];
     if (!cat) return;
-    const icons = { '丁腈车间': '🏭', 'PVC车间': '🧤', '环保设施': '♻️', '生活配套': '🍽️' };
+    const icons = { '展厅': '🏛️', '丁腈车间': '🏭', 'PVC车间': '🧤', '环保仓储': '♻️', '生活配套': '🍽️', '配套基地': '⚙️' };
     $('#siteLeft').innerHTML = data.map((c, i) => {
       const ic = icons[c.name] || '📍';
       return '<button class="site-cat' + (i === state.siteCategory ? ' choose' : '') + '" data-i="' + i + '">' +
@@ -435,11 +459,13 @@
     if (countEl) countEl.textContent = (cat.list ? cat.list.length : 0) + ' 个点位';
     $('#siteContent').innerHTML = (cat.list || []).map((p, i) => {
       const pos = ((i * 17) % 100) + '% ' + ((i * 31) % 100) + '%';
+      const dur = p.duration ? '<span class="site-card-dur">' + esc(p.duration) + '</span>' : '';
       return '<button class="site-card" data-i="' + i + '">' +
         '<span class="site-card-media"><img class="site-card-img" src="' + esc(p.img) + '" alt="" style="object-position:' + pos + '" loading="lazy" />' +
         '<span class="site-card-num">' + String(i + 1).padStart(2, '0') + '</span>' +
         '<span class="site-card-type">' + esc(cat.name) + '</span></span>' +
-        '<span class="site-card-body"><strong class="site-card-name">' + esc(p.name) + '</strong>' +
+        '<span class="site-card-body"><span class="site-card-head">' +
+        '<strong class="site-card-name">' + esc(p.name) + '</strong>' + dur + '</span>' +
         '<span class="site-card-alias">' + esc(p.aliases || '') + '</span></span>' +
         '</button>';
     }).join('');
@@ -457,14 +483,19 @@
   }
 
   /* ---------- 园区选择 picker ---------- */
-  function showCampusPicker(onPick) {
-    const body = state.campus_name_list.map((n, i) =>
-      '<div class="picker-opt' + (i === state.choose ? ' on' : '') + '" data-i="' + i + '" style="padding:12px;border-bottom:1px solid #eee;cursor:pointer;font-size:16px;display:flex;justify-content:space-between">' + esc(n) + (i === state.choose ? ' <span style="color:var(--menu)">✓</span>' : '') + '</div>').join('');
-    openModal('切换园区', body, [{ text: '取消' }]);
+  /* opts.labels：弹窗选项文案；opts.current：当前项索引（缺省用全局 state.campus）。
+     地图页与基地介绍页已共用同一个基地索引，两边弹出的 ✓ 永远一致。 */
+  function showCampusPicker(onPick, opts) {
+    const o = opts || {};
+    const names = o.labels || state.campus_name_list;
+    const current = (typeof o.current === 'number') ? o.current : state.campus;
+    const body = names.map((n, i) =>
+      '<div class="picker-opt' + (i === current ? ' on' : '') + '" data-i="' + i + '" style="padding:12px;border-bottom:1px solid #eee;cursor:pointer;font-size:16px;display:flex;justify-content:space-between">' + esc(n) + (i === current ? ' <span style="color:var(--menu)">✓</span>' : '') + '</div>').join('');
+    openModal('切换基地', body, [{ text: '取消' }]);
     $$('.picker-opt', $('#modalBody')).forEach((el) => el.addEventListener('click', () => {
       const i = Number(el.dataset.i);
       hideModal();
-      if (i !== state.choose) onPick && onPick(i);
+      if (i !== current) onPick && onPick(i);
     }));
   }
 
@@ -484,11 +515,94 @@
   /* ---------- 定位（淮北地图与青州地图共用） ---------- */
   let mapUserMarker = null;         // 用户当前位置蓝点
   let mapLocationWatching = false;  // 是否已开启持续定位
+  let mapLocationResolved = false;  // 是否已有任意定位请求成功
+  let mapLocationUserRequested = false; // 用户是否主动点击过定位
+  let mapLocationErrorTimer = null;
   let mapFirstFixToast = false;     // 首次定位成功提示是否已展示
   let mapOrientationAttached = false;
   let mapOrientationPermissionPromise = null;
+  let mapOrientationPermissionDenied = false;
   let mapOrientationAbsoluteAt = 0;
   let mapCurrentHeading = null;
+  let mapOrientationEventCount = 0;
+  let mapOrientationLastLogAt = 0;
+  let mapOrientationNoEventTimer = null;
+  let mapOrientationArrowMissingLogged = false;
+
+  /* ---------- iOS 方向权限引导 ----------
+     iOS(Safari) 规定 DeviceOrientationEvent.requestPermission() 必须由「页面内的用户手势」
+     触发。定位权限弹窗上的「允许」是系统弹窗，不算页面手势，所以「定位成功后自动申请」在
+     iOS 上会拿到 NotAllowedError，箭头不会出现——这正是必须手动点右侧按钮的原因。
+     系统又不提供查询权限状态的方法，只有「已授权」时才允许无手势静默调用成功。因此：
+       1) 此前授权过（本地有记录）→ 进入页面即静默申请，直接生效（0 次点击）；
+       2) 首次进入 → 挂上「页面首次触摸即申请」，并给出底部引导条，
+          用户不需要去找右侧那个小按钮；
+       3) 用户明确选了「不允许」→ 不再反复打扰，右侧按钮仍可手动重试。 */
+  const ORIENT_STORE_KEY = 'glu.orientation.granted';
+  let mapOrientationNeedsGesture = false;   // 系统要求手势，正在等用户触摸
+  let mapOrientationGestureArmed = false;   // 「首次触摸即申请」监听是否已挂上
+  let mapOrientationGestureTries = 0;       // 手势申请尝试次数（防止无限重挂）
+
+  function readOrientationGrantedFlag() {
+    try { return window.localStorage.getItem(ORIENT_STORE_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  function writeOrientationGrantedFlag(granted) {
+    try {
+      if (granted) window.localStorage.setItem(ORIENT_STORE_KEY, '1');
+      else window.localStorage.removeItem(ORIENT_STORE_KEY);
+    } catch (e) { /* 无痕模式下 localStorage 可能不可用，忽略即可 */ }
+  }
+
+  function showOrientationHint() {
+    const hint = $('#mapOrientHint');
+    const page = $('#page-map');
+    if (hint) hint.classList.add('on');
+    if (page) page.classList.add('orient-hint-on');
+  }
+
+  function hideOrientationHint() {
+    const hint = $('#mapOrientHint');
+    const page = $('#page-map');
+    if (hint) hint.classList.remove('on');
+    if (page) page.classList.remove('orient-hint-on');
+  }
+
+  /* 挂上「页面首次触摸即申请」：用户进入地图页后的第一次点击/触摸就完成申请，
+     不需要知道右侧有个朝向按钮。监听挂在 #page-map 上，切到别的 tab 不会误触发。 */
+  function armOrientationGesture() {
+    if (mapOrientationAttached || mapOrientationPermissionDenied) return;
+    mapOrientationNeedsGesture = true;
+    showOrientationHint();
+    if (mapOrientationGestureArmed) return;
+    mapOrientationGestureArmed = true;
+    const target = $('#page-map') || document;
+    const onFirstGesture = () => {
+      target.removeEventListener('touchend', onFirstGesture, true);
+      target.removeEventListener('click', onFirstGesture, true);
+      mapOrientationGestureArmed = false;
+      mapOrientationGestureTries += 1;
+      orientationDebug('捕捉到页面手势，申请设备朝向权限', {
+        functionName: 'armOrientationGesture',
+        tries: mapOrientationGestureTries,
+      });
+      // 稍等一拍，让这次点击自己的动作（开弹窗/起定位）先走完，再弹系统权限框，避免两个弹窗叠在一起。
+      // 手势带来的 transient activation 有数秒有效期，这点延迟不影响申请。
+      setTimeout(() => {
+        requestOrientationPermission().then((granted) => {
+          if (granted) return;
+          if (!mapOrientationPermissionDenied && mapOrientationGestureTries < 3) {
+            armOrientationGesture();   // 手势没被系统识别，挂回去等下一次触摸
+          } else {
+            hideOrientationHint();     // 用户拒绝或多次失败：不再打扰
+          }
+        });
+      }, 240);
+    };
+    target.addEventListener('touchend', onFirstGesture, true);
+    target.addEventListener('click', onFirstGesture, true);
+  }
+
   let guideRouteLayer = null;       // 厂区固定引导路线（data.js 里的 guide_route）
   let guideRoutePoints = [];
 
@@ -519,8 +633,10 @@
     if (center) map.setView(latLng, Math.max(map.getZoom(), 16));
   }
 
-  function locateAndCenter(lat, lng) {
-    updateUserMarker([lat, lng], true);
+  /* center=false 只更新蓝点不居中：围栏兜底已经把视角定到工厂大门时用它，
+     否则刚切好的大门视角会被用户点（可能在几百公里外）瞬间拉走 */
+  function locateAndCenter(lat, lng, center) {
+    updateUserMarker([lat, lng], center !== false);
   }
 
   function locationErrorMessage(err) {
@@ -550,8 +666,39 @@
     );
   }
 
-  function handleLocError(err) {
-    showLocationError(err);
+  function markLocationResolved() {
+    mapLocationResolved = true;
+    if (mapLocationErrorTimer) {
+      clearTimeout(mapLocationErrorTimer);
+      mapLocationErrorTimer = null;
+    }
+  }
+
+  function handleLocError(err, source = 'unknown') {
+    locationDebugWarn('定位获取失败', {
+      functionName: source,
+      apiName: source,
+      code: err && err.code,
+      message: err && err.message,
+      resolved: mapLocationResolved,
+      userRequested: mapLocationUserRequested,
+    });
+    if (mapLocationResolved) {
+      locationDebug('已有成功定位，忽略失败回调', { functionName: source });
+      return;
+    }
+    if (!mapLocationUserRequested) {
+      locationDebug('后台定位失败，不弹出定位失败提示；等待其他定位请求', { functionName: source });
+      return;
+    }
+    if (mapLocationErrorTimer) clearTimeout(mapLocationErrorTimer);
+    mapLocationErrorTimer = setTimeout(() => {
+      mapLocationErrorTimer = null;
+      if (!mapLocationResolved) {
+        locationDebugWarn('准备显示定位失败提示', { functionName: source, error: err });
+        showLocationError(err);
+      }
+    }, 500);
   }
 
   function normalizeHeading(value) {
@@ -566,89 +713,347 @@
     return Number.isFinite(angle) ? angle : 0;
   }
 
+  function getOrientationSupport() {
+    const constructorSupported = typeof window.DeviceOrientationEvent !== 'undefined';
+    const relativeEventSupported = 'ondeviceorientation' in window;
+    const absoluteEventSupported = 'ondeviceorientationabsolute' in window;
+    return {
+      constructorSupported,
+      relativeEventSupported,
+      absoluteEventSupported,
+      supported: constructorSupported || relativeEventSupported || absoluteEventSupported,
+    };
+  }
+
   function readDeviceHeading(event, source) {
     if (typeof event.webkitCompassHeading === 'number' && Number.isFinite(event.webkitCompassHeading)) {
       return normalizeHeading(event.webkitCompassHeading);
     }
     if (typeof event.alpha !== 'number' || !Number.isFinite(event.alpha)) return null;
-    const absolute = source === 'absolute' || event.absolute === true;
-    return normalizeHeading(absolute
-      ? 360 - event.alpha + screenOrientationAngle()
-      : 360 - event.alpha + screenOrientationAngle());
+    return normalizeHeading(360 - event.alpha + screenOrientationAngle());
   }
 
   function updateHeadingVisuals(heading) {
     const arrow = $('.map-user-marker-icon .user-heading');
-    if (!arrow) return;
+    if (!arrow) {
+      if (!mapOrientationArrowMissingLogged) {
+        mapOrientationArrowMissingLogged = true;
+        orientationDebugWarn('朝向显示失败', {
+          functionName: 'updateHeadingVisuals',
+          selector: '.map-user-marker-icon .user-heading',
+          reason: '箭头元素不存在，通常表示当前位置蓝点尚未创建',
+        });
+      }
+      return;
+    }
     if (!Number.isFinite(heading)) {
       arrow.classList.remove('visible');
+      orientationDebugWarn('朝向解析结果不可用，箭头保持隐藏', {
+        functionName: 'readDeviceHeading',
+        calledFrom: 'onDeviceOrientation',
+        reason: 'heading 为 null 或非有限数字',
+        heading,
+        arrowClassName: arrow.className,
+      });
       return;
     }
     arrow.style.transform = 'translate(-50%, -100%) rotate(' + heading + 'deg)';
     arrow.classList.add('visible');
+    orientationDebug('箭头已显示', {
+      heading,
+      transform: arrow.style.transform,
+      arrowClassName: arrow.className,
+    });
   }
 
   function onDeviceOrientation(event, source) {
+    mapOrientationEventCount += 1;
+    const now = Date.now();
+    const raw = {
+      source,
+      count: mapOrientationEventCount,
+      absolute: event.absolute,
+      alpha: event.alpha,
+      beta: event.beta,
+      gamma: event.gamma,
+      webkitCompassHeading: event.webkitCompassHeading,
+      screenAngle: screenOrientationAngle(),
+    };
+    if (now - mapOrientationLastLogAt >= 500 || mapOrientationEventCount <= 3) {
+      mapOrientationLastLogAt = now;
+      orientationDebug('收到设备朝向事件', raw);
+    }
     if (source === 'absolute') {
-      mapOrientationAbsoluteAt = Date.now();
-    } else if (mapOrientationAbsoluteAt && Date.now() - mapOrientationAbsoluteAt < 1500) {
+      mapOrientationAbsoluteAt = now;
+    } else if (mapOrientationAbsoluteAt && now - mapOrientationAbsoluteAt < 1500) {
+      orientationDebug('忽略普通朝向事件，优先使用刚收到的绝对朝向');
       return;
     }
     const heading = readDeviceHeading(event, source);
-    if (heading === null) return;
+    if (heading === null) {
+      orientationDebugWarn('朝向解析失败', {
+        functionName: 'readDeviceHeading',
+        calledFrom: 'onDeviceOrientation',
+        reason: 'alpha 和 webkitCompassHeading 都不可用',
+        event: raw,
+      });
+      return;
+    }
     mapCurrentHeading = heading;
+    orientationDebug('朝向解析成功，正在更新蓝点箭头', { source, heading });
     updateHeadingVisuals(heading);
   }
 
   function attachOrientationListeners() {
-    if (mapOrientationAttached || !window.DeviceOrientationEvent) return;
+    if (mapOrientationAttached) {
+      orientationDebug('设备朝向监听已存在，跳过重复绑定');
+      return;
+    }
+    const support = getOrientationSupport();
+    if (!support.supported) {
+      orientationDebugWarn('朝向监听失败', {
+        functionName: 'attachOrientationListeners',
+        apiName: 'window.DeviceOrientationEvent',
+        reason: '设备朝向 API 和 deviceorientation 事件均不存在',
+        support,
+      });
+      return;
+    }
     mapOrientationAttached = true;
-    window.addEventListener('deviceorientationabsolute', (event) => onDeviceOrientation(event, 'absolute'), true);
-    window.addEventListener('deviceorientation', (event) => onDeviceOrientation(event, 'relative'), true);
+    mapOrientationNeedsGesture = false;
+    mapOrientationGestureTries = 0;
+    writeOrientationGrantedFlag(true);   // 下次进入可直接静默恢复，无需任何点击
+    hideOrientationHint();
+    const orientBtn = $('#mapOrientationBtn');
+    if (orientBtn) orientBtn.classList.add('granted');
+    const absoluteListenerReturn = window.addEventListener(
+      'deviceorientationabsolute',
+      (event) => onDeviceOrientation(event, 'absolute'),
+      true
+    );
+    const relativeListenerReturn = window.addEventListener(
+      'deviceorientation',
+      (event) => onDeviceOrientation(event, 'relative'),
+      true
+    );
+    orientationDebug('设备朝向监听已绑定', {
+      absolute: true,
+      relative: true,
+      requestPermission: support.constructorSupported
+        && typeof window.DeviceOrientationEvent.requestPermission === 'function',
+      addEventListenerReturn: {
+        deviceorientationabsolute: absoluteListenerReturn,
+        deviceorientation: relativeListenerReturn,
+      },
+    });
+    if (mapOrientationNoEventTimer) clearTimeout(mapOrientationNoEventTimer);
+    mapOrientationNoEventTimer = setTimeout(() => {
+      mapOrientationNoEventTimer = null;
+      if (!mapOrientationEventCount) {
+        orientationDebugWarn('朝向获取失败：没有收到事件', {
+          functionName: 'onDeviceOrientation',
+          apiName: 'deviceorientationabsolute / deviceorientation',
+          registeredBy: 'attachOrientationListeners',
+          reason: '监听已绑定，但设备未回调任何设备朝向事件；请检查设备传感器、浏览器权限和 HTTPS/localhost 环境',
+        });
+      }
+    }, 5000);
   }
 
-  function requestOrientationPermission() {
-    if (!window.DeviceOrientationEvent) return Promise.resolve(false);
-    if (mapOrientationPermissionPromise) return mapOrientationPermissionPromise;
-    const request = window.DeviceOrientationEvent.requestPermission;
-    mapOrientationPermissionPromise = (typeof request === 'function'
-      ? request.call(window.DeviceOrientationEvent).then((result) => {
+  function requestOrientationPermission(forceRetry = false) {
+    const support = getOrientationSupport();
+    if (!support.supported) {
+      orientationDebugWarn('朝向权限获取失败', {
+        functionName: 'requestOrientationPermission',
+        apiName: 'DeviceOrientationEvent.requestPermission',
+        reason: '设备朝向 API 和 deviceorientation 事件均不存在',
+        support,
+      });
+      return Promise.resolve(false);
+    }
+    if (mapOrientationPermissionDenied && !forceRetry) {
+      orientationDebug('朝向权限此前已拒绝，本次不重复申请；如需重试请修改浏览器权限后刷新页面');
+      return Promise.resolve(false);
+    }
+    if (forceRetry) mapOrientationPermissionDenied = false;
+    if (mapOrientationPermissionPromise) {
+      orientationDebug('朝向权限请求已在进行中，复用原 Promise');
+      return mapOrientationPermissionPromise;
+    }
+    const request = support.constructorSupported && typeof window.DeviceOrientationEvent.requestPermission === 'function'
+      ? window.DeviceOrientationEvent.requestPermission
+      : null;
+    orientationDebug('开始请求设备朝向权限', {
+      requestPermission: typeof request === 'function',
+      secureContext: window.isSecureContext,
+    });
+    if (typeof request !== 'function') {
+      orientationDebug('当前浏览器无需调用 requestPermission，直接绑定监听', {
+        fallbackEventListener: !support.constructorSupported,
+        support,
+        methodReturnValue: true,
+        returnType: 'boolean',
+      });
+      mapOrientationPermissionPromise = Promise.resolve(true).then(() => {
+        attachOrientationListeners();
+        return true;
+      });
+      return mapOrientationPermissionPromise;
+    }
+    let permissionReturn;
+    try {
+      permissionReturn = request.call(window.DeviceOrientationEvent);
+      orientationDebug('DeviceOrientationEvent.requestPermission() 方法同步返回值', {
+        returnValue: permissionReturn,
+        returnType: typeof permissionReturn,
+      });
+    } catch (error) {
+      mapOrientationPermissionPromise = null;
+      orientationDebugWarn('朝向权限获取失败', {
+        functionName: 'requestOrientationPermission',
+        apiName: 'DeviceOrientationEvent.requestPermission',
+        reason: '调用发生同步异常',
+        error,
+      });
+      return Promise.resolve(false);
+    }
+    mapOrientationPermissionPromise = Promise.resolve(permissionReturn).then((result) => {
+        orientationDebug('设备朝向权限返回结果', result);
         if (result !== 'granted') {
           mapOrientationPermissionPromise = null;
+          mapOrientationPermissionDenied = true;
+          hideOrientationHint();
+          orientationDebugWarn('朝向权限获取失败', {
+            functionName: 'DeviceOrientationEvent.requestPermission',
+            apiName: 'DeviceOrientationEvent.requestPermission',
+            returnValue: result,
+            reason: '权限未授权，箭头将保持隐藏',
+          });
           return false;
         }
         attachOrientationListeners();
         return true;
-      })
-      : Promise.resolve(true).then(() => {
-        attachOrientationListeners();
-        return true;
-      })
-    ).catch(() => {
+      }).catch((error) => {
       mapOrientationPermissionPromise = null;
+      /* NotAllowedError = 系统要求必须由「页面内手势」触发，而这次调用没有手势。
+         它不等于用户拒绝：不能标记 denied 把自己锁死，交给手势流程再申请一次。 */
+      if (error && error.name === 'NotAllowedError') {
+        mapOrientationNeedsGesture = true;
+        orientationDebug('设备朝向权限需要页面手势，等用户触摸页面后再申请', {
+          functionName: 'requestOrientationPermission',
+          reason: error.message || 'NotAllowedError',
+        });
+        return false;
+      }
+      mapOrientationPermissionDenied = true;
+      hideOrientationHint();
+      orientationDebugWarn('朝向权限获取失败', {
+        functionName: 'requestOrientationPermission',
+        apiName: 'DeviceOrientationEvent.requestPermission',
+        reason: 'Promise rejected',
+        error,
+      });
       return false;
     });
     return mapOrientationPermissionPromise;
   }
 
-  function initOrientation() {
-    if (!window.DeviceOrientationEvent) return;
-    if (typeof window.DeviceOrientationEvent.requestPermission !== 'function') {
-      attachOrientationListeners();
+  function requestOrientationAfterLocation(source) {
+    if (!mapLocationUserRequested) {
+      orientationDebug('定位成功，但不是用户主动点击定位；暂不申请朝向权限', { source });
+      return;
     }
+    orientationDebug('定位成功，开始申请朝向权限', {
+      source,
+      functionName: 'requestOrientationAfterLocation',
+      nextFunction: 'requestOrientationPermission',
+    });
+    requestOrientationPermission();
+  }
+
+  function initOrientation() {
+    const support = getOrientationSupport();
+    const supported = support.supported;
+    const requiresGesture = support.constructorSupported
+      && typeof window.DeviceOrientationEvent.requestPermission === 'function';
+    orientationDebug('初始化设备朝向能力', {
+      supported,
+      requiresGesture,
+      support,
+      secureContext: window.isSecureContext,
+      screenOrientation: window.screen && window.screen.orientation
+        ? window.screen.orientation.type
+        : 'unavailable',
+    });
+    if (!supported) {
+      orientationDebugWarn('朝向初始化失败', {
+        functionName: 'initOrientation',
+        apiName: 'window.DeviceOrientationEvent',
+        reason: '当前环境不支持设备朝向',
+      });
+      return;
+    }
+    if (!requiresGesture) {
+      attachOrientationListeners();
+      return;
+    }
+    /* iOS：系统不提供权限状态查询，但只有「已授权」时才允许无手势静默调用成功。
+       此前授权过 → 进入页面即静默恢复（0 次点击）；否则 → 挂上「首次触摸即申请」+ 引导条。 */
+    if (readOrientationGrantedFlag()) {
+      orientationDebug('此前已授权设备朝向，进入页面即静默恢复监听');
+      requestOrientationPermission().then((granted) => {
+        if (!granted) armOrientationGesture();
+      });
+      return;
+    }
+    orientationDebug('iOS 需要一次页面手势才能申请设备朝向：已挂上「首次触摸即申请」并显示引导条');
+    armOrientationGesture();
   }
 
   /* 持续定位：只更新蓝点位置，不自动居中，避免干扰浏览 */
   function startLocationWatch() {
-    if (mapLocationWatching || !navigator.geolocation) return;
+    if (mapLocationWatching) {
+      locationDebug('跳过 watchPosition：当前已经存在持续定位监听');
+      return;
+    }
+    if (!navigator.geolocation) {
+      locationDebugWarn('无法调用定位函数', {
+        functionName: 'startLocationWatch',
+        apiName: 'navigator.geolocation.watchPosition',
+        reason: 'navigator.geolocation 不存在',
+      });
+      return;
+    }
     mapLocationWatching = true;
-    navigator.geolocation.watchPosition((pos) => {
+    const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 };
+    locationDebug('调用 navigator.geolocation.watchPosition', {
+      method: 'watchPosition(success, error, options)',
+      options,
+    });
+    const watchId = navigator.geolocation.watchPosition((pos) => {
+      locationDebug('watchPosition 成功回调返回值', {
+        position: pos,
+        coords: pos && pos.coords,
+        timestamp: pos && pos.timestamp,
+      });
+      markLocationResolved();
       const [lat, lng] = toGcj(pos.coords.latitude, pos.coords.longitude);
       const isFirst = !mapFirstFixToast;
       mapFirstFixToast = true;
-      updateUserMarker([lat, lng], isFirst); // 仅首次定位成功时居中一次
-      if (isFirst) toast('已定位到当前位置', 1200);
-    }, handleLocError, { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 });
+      // 首帧按围栏定一次基地（含兜底）；后续刷新不再动用户手动选的基地
+      resolveCampusByLocation(lat, lng, isFirst);
+      // 仅首次定位成功时居中一次；刚用过搜索页「定位」或刚兜底到大门口时把视角让给它（否则会被抢走）
+      updateUserMarker([lat, lng], isFirst && !locationNoticeShown && Date.now() >= state.focusLock);
+      if (isFirst && !locationNoticeShown) toast('已定位到当前位置', 1200);
+      requestOrientationAfterLocation('navigator.geolocation.watchPosition');
+    }, (err) => {
+      locationDebugWarn('watchPosition 失败回调返回值', err);
+      handleLocError(err, 'navigator.geolocation.watchPosition');
+    }, options);
+    locationDebug('watchPosition 方法同步返回值', {
+      returnValue: watchId,
+      returnType: typeof watchId,
+    });
   }
 
   /* 两点间方位角（度） */
@@ -693,16 +1098,39 @@
     if (!state.mapInited) {
       state.mapInited = true;
       initMap();
+      applyPendingFocus();
       return;
     }
-    // 地图 / 青州地图 共用同一套实现：只有真正换了厂区才重载数据，
-    // 同一个 tab 来回切（如从搜索页返回）保留已选起终点。
-    if (state.mapCampus !== state.appliedCampus) {
+    // 地图页与基地介绍页共用 state.campus：只有真正换了基地才重载数据，
+    // 从子页返回（如搜索页）时保留已选起终点。
+    if (state.campus !== state.appliedCampus) {
       applyCampus();
       renderGuideRoute(mapCampusData());
     }
     if (map) map.invalidateSize();
     syncMapInputs();
+    applyPendingFocus();
+  }
+
+  /* 落地搜索页「定位」的目标：切到点位所在分类 → 以该点位为中心。
+     必须放在 onMapShow 的最后：前面可能刚按基地差异重载过数据、重绘过标记
+     （renderCategoryMarkers 里的 fitMarkers 会把视角缩到整片点位），视角得最后定。 */
+  function applyPendingFocus() {
+    const f = state.focusPoint;
+    if (!f || !map) return;
+    state.focusPoint = null;
+    // 「全部」里什么点位都有，不必切分类；只有当前分类压根看不到这个点位时才切过去，
+    // 免得把用户自己选的分类莫名其妙换掉
+    const visibleInCurrent = state.mapCategory === 0 || state.mapCategory === f.category;
+    if (!visibleInCurrent && f.category > 0) {
+      state.mapCategory = f.category;
+      $$('#mapCategories .map-cat').forEach((el, k) => el.classList.toggle('choose', k === f.category));
+      renderCategoryMarkers();
+    }
+    state.focusLock = Date.now() + 3000;
+    map.invalidateSize();
+    map.setView([f.latitude, f.longitude], FOCUS_ZOOM);
+    toast('已定位到 ' + f.name, 1600);
   }
 
   function initMap() {
@@ -726,39 +1154,99 @@
     markerLayer = L.layerGroup().addTo(map);
     routeLayer = L.layerGroup().addTo(map);
 
-    $('#mapCampusBtn').addEventListener('click', () => showCampusPicker((i) => switchCampus(i)));
-    $('#mapExchangeBtn').addEventListener('click', exchange);
-    $('#mapRouteBtn').addEventListener('click', formSubmit);
+    $('#mapCampusBtn').addEventListener('click', () => showCampusPicker(
+      (i) => switchCampus(i),
+      { labels: MAP.site_data.map((s) => s.base_name || s.name), current: state.campus }
+    ));
+    $('#mapSearchBtn').addEventListener('click', () => {
+      const input = $('#mapSearchInput');
+      const content = input ? input.value.trim() : '';
+      if (!content) {
+        toast('请输入要搜索的地点');
+        if (input) input.focus();
+        return;
+      }
+      state.searchTarget = 0;
+      state.searchContent = content;
+      state.searchAutoRun = true;
+      location.hash = '#/search?id=0';
+    });
+    $('#mapSearchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $('#mapSearchBtn').click();
+    });
+    $('#mapOrientationBtn').addEventListener('click', () => {
+      orientationDebug('点击朝向权限申请按钮', {
+        functionName: 'requestOrientationPermission',
+        forceRetry: true,
+      });
+      requestOrientationPermission(true).then((granted) => {
+        orientationDebug('朝向权限申请按钮返回结果', { granted });
+        $('#mapOrientationBtn').classList.toggle('granted', !!granted);
+        toast(granted ? '方向指引已开启' : '未获得方向权限，请在浏览器设置中允许「运动与方向」', 2200);
+      });
+    });
     $('#mapLocationBtn').addEventListener('click', () => {
-      requestOrientationPermission();
+      mapLocationUserRequested = true;
+      orientationDebug('点击定位按钮：先获取定位，定位成功后再申请朝向权限', {
+        locationFunction: 'navigator.geolocation.getCurrentPosition / watchPosition',
+        orientationFunction: 'requestOrientationPermission（定位成功后调用）',
+      });
       if (!navigator.geolocation) {
+        locationDebugWarn('无法调用定位函数', {
+          functionName: 'mapLocationBtn click handler',
+          apiName: 'navigator.geolocation.getCurrentPosition',
+          reason: 'navigator.geolocation 不存在',
+        });
         showLocationError({ message: '当前浏览器不支持 Geolocation API' });
         return;
       }
       toast('正在获取位置…');
       // 已在跟随：重新取一次当前位置并居中，不重新开启定位
       if (mapLocationWatching) {
-        navigator.geolocation.getCurrentPosition(
+        const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 };
+        locationDebug('调用 navigator.geolocation.getCurrentPosition', {
+          method: 'getCurrentPosition(success, error, options)',
+          source: '用户点击定位按钮',
+          options,
+        });
+        const currentPositionReturn = navigator.geolocation.getCurrentPosition(
           (pos) => {
+            locationDebug('getCurrentPosition 成功回调返回值', {
+              position: pos,
+              coords: pos && pos.coords,
+              timestamp: pos && pos.timestamp,
+            });
+            markLocationResolved();
             const [lat, lng] = toGcj(pos.coords.latitude, pos.coords.longitude);
-            locateAndCenter(lat, lng);
-            toast('已定位到当前位置', 1200);
+            // 点定位按钮 = 强制重判基地：人到哪个基地附近就切哪个
+            resolveCampusByLocation(lat, lng, true);
+            // 兜底到大门口时不居中到用户点，保留大门视角
+            locateAndCenter(lat, lng, !locationNoticeShown);
+            if (!locationNoticeShown) toast('已定位到当前位置', 1200);
+            requestOrientationAfterLocation('navigator.geolocation.getCurrentPosition（用户点击定位）');
           },
-          handleLocError,
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
+          (err) => {
+            locationDebugWarn('getCurrentPosition 失败回调返回值', err);
+            handleLocError(err, 'navigator.geolocation.getCurrentPosition（用户点击定位）');
+          },
+          options
         );
+        locationDebug('getCurrentPosition 方法同步返回值', {
+          returnValue: currentPositionReturn,
+          returnType: typeof currentPositionReturn,
+        });
         return;
       }
       startLocationWatch();
     });
     $('#mapRestoreBtn').addEventListener('click', restore);
     $('#mapBottomBtn').addEventListener('click', clickMapBottom);
-    $('#mapLayerToggle').addEventListener('click', (e) => {
+    $('#mapLayerToggle').addEventListener('click', () => {
       state.showMapImg = !state.showMapImg;
-      e.currentTarget.textContent = state.showMapImg ? '真实地图' : '示意图';
+      renderLayerToggleText();
       renderCampusOverlay();
     });
-    $('#mapLayerToggle').textContent = state.showMapImg ? '真实地图' : '示意图';
+    renderLayerToggleText();
     $$('.map-modes .mode').forEach((m) => m.addEventListener('click', () => modeChoose(m.dataset.mode)));
 
     applyCampus();
@@ -771,15 +1259,23 @@
     setTimeout(() => { if (map) map.invalidateSize(); }, 350);
   }
 
+  /* 侧边栏图层按钮文案：按行排版，「真实地图」固定拆成「真实 / 地图」两行
+     （按钮是 46px 圆钮，自然折行会变成「真实地 / 图」，所以用 .lt-line 行盒显式分行） */
+  function renderLayerToggleText() {
+    const btn = $('#mapLayerToggle');
+    if (!btn) return;
+    btn.innerHTML = state.showMapImg
+      ? '<span class="lt-line">真实</span><span class="lt-line">地图</span>'
+      : '<span class="lt-line">示意图</span>';
+  }
+
   function applyCampus() {
     const campus = mapCampusData();
     state.mapPoints = campus.range || [];
     state.mapDefaultPoint = defaultPointOf(campus);
     // 切厂区时重置起终点，避免残留上一个厂区的点位
     const def = state.mapDefaultPoint;
-    state.start = (def && def.latitude)
-      ? { name: def.name, latitude: def.latitude, longitude: def.longitude }
-      : { name: '', latitude: '', longitude: '' };
+    state.start = defaultStartOf(def);
     state.end = { name: '', latitude: '', longitude: '' };
     state.mapCategory = 0;
     state.route.polyline = null;
@@ -790,17 +1286,17 @@
     renderCampusControl();
     renderCampusOverlay();
     renderCategoryMarkers();
-    state.appliedCampus = state.mapCampus;
+    state.appliedCampus = state.campus;
     if (map) {
       map.setView([campus.latitude, campus.longitude], MAP.scale || 16);
     }
   }
 
   function renderCampusControl() {
-    // 厂区由底部 tab（地图 / 青州地图）决定，地图页内不再重复放切换按钮
-    $('#mapCampusWrap').style.display = 'none';
-    $('#mapCampusBtn').textContent = mapCampusData().name || '';
-    const cats = mapSiteData();
+    // 顶部基地名：既是当前基地标识，也是切换基地的入口（多个厂区时才显示）
+    $('#mapCampusWrap').style.display = (MAP.site_data.length > 1) ? 'flex' : 'none';
+    $('#mapCampusBtn').textContent = campusLabel(mapCampusData());
+    const cats = mapDisplayCategories();
     $('#mapCategories').innerHTML = cats.map((c, i) =>
       '<div class="map-cat' + (i === state.mapCategory ? ' choose' : '') + '" data-i="' + i + '">' + esc(c.name) + '</div>').join('');
     $$('#mapCategories .map-cat').forEach((el) => el.addEventListener('click', () => changeCategory(Number(el.dataset.i))));
@@ -1022,32 +1518,65 @@
   function renderCategoryMarkers() {
     if (!markerLayer) return;
     markerLayer.clearLayers();
-    const cat = mapSiteData()[state.mapCategory];
+    const cat = mapDisplayCategories()[state.mapCategory];
     if (!cat) return;
-    const tone = markerToneOf(cat);
 
     let markers = [];
     const loc = (state.start && state.start.latitude) ? state.start : null;
-    // 起点即当前位置时由实时蓝点表示，不再重复画一个大头针
-    if (loc && loc.name !== '当前位置') markers.push(formMarker(loc, 'location', -1));
+    // 默认位置（工厂大门）按普通点位渲染，与「办公室」同款；真实定位仍是人物图标
+    if (loc && loc.name !== '当前位置') {
+      const isDefaultPoint = loc.name === '工厂大门';
+      markers.push(formMarker(loc, isDefaultPoint ? 'site' : 'location', -1, isDefaultPoint ? 'life' : undefined, isDefaultPoint ? '生活配套' : undefined));
+    }
     cat.list.forEach((site, i) => {
       const isCurrent = loc && Math.abs(Number(site.latitude) - Number(loc.latitude)) < 0.000001 && Math.abs(Number(site.longitude) - Number(loc.longitude)) < 0.000001;
-      if (!isCurrent) markers.push(formMarker(site, 'site', i + 1, tone, cat.name));
+      if (!isCurrent) {
+        // 「全部」里每个点位沿用自己所属分类的配色与讲解，而不是「全部」这个虚拟分类
+        const catName = site._catName || cat.name;
+        markers.push(formMarker(site, 'site', i + 1, markerToneOf({ name: catName }), catName));
+      }
     });
     fitMarkers(markers);
   }
 
   function markerToneOf(category) {
-    const tones = { '丁腈车间': 'nitrile', 'PVC车间': 'pvc', '环保设施': 'eco', '生活配套': 'life' };
+    const tones = { '展厅': 'storage', '丁腈车间': 'nitrile', 'PVC车间': 'pvc', '环保仓储': 'eco', '生活配套': 'life' };
     return tones[category.name] || 'main';
   }
+
+  // 标签前的「小手」：提示该点位可点击 = 手指朝右 + 指尖「点击波纹」。
+  // 形状：Material「pan_tool_alt」剪影（Apache-2.0），绕画布中心顺时针转 90° —— 手指朝右，
+  //   正好指着紧随其后的点位名称。素材原生「手指朝上」，朝上时容易被读成向上箭头/图钉。
+  // 旋转写在 transform 上（不重写 path 坐标）：想改回朝上/朝左，只动这一个角度即可。
+  //   translate(0 -0.5) 是补正 —— 素材内容中心在 (12.5, 12)，转 90° 后落到 (12, 12.5)，
+  //   需上移 0.5 单位才在 24 画布里精确居中（11px 显示时相当于 0.23px）。
+  // 波纹（.tap-ripple）刻意不画进这个 SVG，而是用独立的 HTML 元素：
+  //   ① SVG 只有 11px，任何环/弧进来都会被缩放糊掉（8 轮光栅化比对已验证）；
+  //   ② 独立元素可以用纯 CSS transform 做扩散，控制精确、各浏览器一致。
+  // 注意：波纹**不能画成闭合环**。实测「手指 + 闭环」会被读成「捏着一把钥匙」，
+  //   所以只用右半段开口弧，且始终在扩散/淡出 —— 动起来的开口弧才读作「点一下」。
+  // 选型依据见 .workbuddy/tap_guide*_sheet.png（11 个朝右候选 + 6 轮波纹写法比对）。
+  // 对齐：内容已居中 → css 里 .label-tap 的 vertical-align 用居中基准值 -1.5px。
+  const TAP_HAND_ICON =
+    '<span class="label-tap" aria-hidden="true">' +
+    '<svg class="tap-hand" viewBox="0 0 24 24" focusable="false">' +
+    '<path transform="translate(0 -0.5) rotate(90 12 12)" d="m19.98 14.82-.63 4.46c-.14.99-.99 1.72-1.98 1.72h-6.16c-.53 0-1.29-.21-1.66-.59L5 15.62l.83-.84c.24-.24.58-.35.92-.28l3.25.74V4.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v6h.91c.31 0 .62.07.89.21l4.09 2.04c.77.39 1.21 1.22 1.09 2.07z"/>' +
+    '</svg>' +
+    '<i class="tap-ripple"></i><i class="tap-ripple tap-ripple-b"></i>' +
+    '</span>';
 
   function formMarker(site, type, id, tone, categoryName) {
     const label = type === 'location' ? (site.name || '当前位置') : site.name;
     const toneClass = type === 'site' && tone ? ' tone-' + tone : '';
+    // 呼吸光圈错峰：按点位序号依次延后，避免整片点位同时闪动
+    // 取模到动画周期 2.8s 内：否则「全部」这类点位多的分类，靠后的点会出现正延时、
+    // 加载后头一两秒没有光圈（看起来像"没效果"）
+    const pulseDelay = (((typeof id === 'number' && id > 0 ? id : 0) * 0.22) % 2.8).toFixed(2) + 's';
+    // 只有 site 类型可点击（location 是真实定位，点了没反应，所以不加小手）
+    const labelHtml = (type === 'site' ? TAP_HAND_ICON : '') + esc(label);
     const icon = L.divIcon({
       className: '',
-      html: '<div class="campus-marker' + toneClass + (type === 'location' ? ' start' : '') + '"><div class="marker-pin">' + (type === 'location' ? '<span class="marker-person"></span>' : '') + '</div><div class="marker-label">' + esc(label) + '</div></div>',
+      html: '<div class="campus-marker' + toneClass + (type === 'location' ? ' start' : '') + '" style="--pulse-delay:' + pulseDelay + '"><span class="marker-pulse"></span><div class="marker-pin">' + (type === 'location' ? '<span class="marker-person"></span>' : '') + '</div><div class="marker-label">' + labelHtml + '</div></div>',
       iconSize: [40, 46],
       iconAnchor: [20, 40],
     });
@@ -1059,69 +1588,283 @@
     return { layer, site, id };
   }
 
+  /* ---------- 讲解音色偏好 ----------
+     voice-lab.html（试音台）选中的音色会存到 localStorage，键 glu_tts_voice：
+     { voiceURI, name, lang, rate, pitch }。没存过就用浏览器默认 + 下面的兜底参数。
+     确认要长期固定某个音色后，可直接把它写进 TTS_FALLBACK 的 voiceName。 */
+  var TTS_FALLBACK = { voiceName: 'Microsoft Yunyang Online (Natural) - Chinese (Mainland)', rate: 0.92, pitch: 1 };
+
+  function readTtsPref() {
+    try {
+      var raw = localStorage.getItem('glu_tts_voice');
+      if (!raw) return TTS_FALLBACK;
+      var p = JSON.parse(raw) || {};
+      return {
+        voiceURI: p.voiceURI || '',
+        voiceName: p.name || TTS_FALLBACK.voiceName,
+        rate: Number(p.rate) || TTS_FALLBACK.rate,
+        pitch: Number(p.pitch) || TTS_FALLBACK.pitch,
+      };
+    } catch (e) {
+      return TTS_FALLBACK;
+    }
+  }
+
+  /* 按试音台保存的 voiceURI 精确匹配；拿不到再退到名字匹配，最后按兜底名字找 */
+  function pickTtsVoice(pref) {
+    if (typeof speechSynthesis === 'undefined') return null;
+    var list = window.speechSynthesis.getVoices() || [];
+    if (!list.length) return null;
+    var byUri = pref.voiceURI && list.filter(function (v) { return v.voiceURI === pref.voiceURI; })[0];
+    if (byUri) return byUri;
+    var name = pref.voiceName || TTS_FALLBACK.voiceName;
+    if (!name) return null;
+    return list.filter(function (v) { return v.name === name; })[0] || null;
+  }
+
+  /* ---------- 离线讲解音频（edge-tts 预生成 MP3） ----------
+     讲解词已用微软神经语音 zh-CN-YunyangNeural 逐段生成 MP3（assets/audio/guides/<voice>/），
+     由 assets/audio/guides/<voice>/manifest.js 提供清单（用 <script> 引入，file:// 也能用）。
+     有音频就播 MP3（分段播放 + 当前段高亮），没有则回退到浏览器语音合成。 */
+  var GUIDE_AUDIO_VOICE = 'zh-CN-YunyangNeural';
+  var guideAudioEl = null;
+  var guideAudio = { playing: false, token: 0 };
+
+  function guideAudioFiles(guideKey) {
+    var all = (window.GLU_GUIDE_AUDIO || {})[GUIDE_AUDIO_VOICE];
+    if (!all || !all.guides) return null;
+    var g = all.guides[guideKey];
+    return (g && g.files && g.files.length) ? g.files : null;
+  }
+
+  function getGuideAudioEl() {
+    if (!guideAudioEl) {
+      guideAudioEl = new Audio();
+      guideAudioEl.preload = 'auto';
+    }
+    return guideAudioEl;
+  }
+
+  /* 高亮正在朗读的段落：第 0 段是导言，正文段落从 1 开始 */
+  function highlightGuideSection(fileIndex) {
+    var secs = document.querySelectorAll('#modalBody .explain-section');
+    for (var i = 0; i < secs.length; i++) {
+      if (i === fileIndex - 1) secs[i].classList.add('speaking');
+      else secs[i].classList.remove('speaking');
+    }
+    var cur = secs[fileIndex - 1];
+    if (cur && cur.scrollIntoView) {
+      try { cur.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+    }
+  }
+  function clearGuideSectionHighlight() {
+    var secs = document.querySelectorAll('#modalBody .explain-section.speaking');
+    for (var i = 0; i < secs.length; i++) secs[i].classList.remove('speaking');
+  }
+
+  function playGuideAudio(guideKey, button, onFail) {
+    var files = guideAudioFiles(guideKey);
+    if (!files) {
+      console.warn('[guide-audio] 清单里没有 guideKey =', guideKey, 'GLU_GUIDE_AUDIO =', window.GLU_GUIDE_AUDIO);
+      return false;
+    }
+    stopTtsKeepAlive();
+    if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+
+    var el = getGuideAudioEl();
+    var pref = readTtsPref();
+    el.playbackRate = pref.rate || TTS_FALLBACK.rate;
+    el.volume = 1;
+    el.muted = false;
+
+    var token = ++guideAudio.token;
+    guideAudio.playing = true;
+    setVoiceBtnState(button, true);
+    console.log('[guide-audio] 开始播放', guideKey, files.length, '段，voice =', GUIDE_AUDIO_VOICE);
+
+    var index = 0;
+    var step = function () {
+      if (!guideAudio.playing || token !== guideAudio.token) return;
+      var f = files[index];
+      if (!f) { stopGuideAudio(button); return; }
+      highlightGuideSection(index);
+      el.src = f.file;
+      el.currentTime = 0;
+      var done = false;
+      var once = function () {
+        if (done) return;
+        done = true;
+        index += 1;
+        step();
+      };
+      el.onended = once;
+      el.onerror = once;
+      var p = el.play();
+      if (p && p.catch) {
+        p.catch(function (err) {
+          console.warn('[guide-audio] play() 被拒绝：', err && err.name, err && err.message, 'mediaError =', el.error && el.error.code);
+          if (done) return;
+          done = true;
+          if (index === 0 && onFail) {
+            // 第一段就播不出来：多半是浏览器拦截/解码问题，直接回退浏览器语音合成
+            stopGuideAudio(button);
+            toast('离线语音播放失败，已切回浏览器语音');
+            onFail();
+          } else {
+            index += 1;
+            step();
+          }
+        });
+      }
+    };
+    step();
+    return true;
+  }
+
+  function stopGuideAudio(button) {
+    guideAudio.playing = false;
+    guideAudio.token += 1;
+    if (guideAudioEl) {
+      guideAudioEl.onended = null;
+      guideAudioEl.onerror = null;
+      try { guideAudioEl.pause(); } catch (e) {}
+    }
+    clearGuideSectionHighlight();
+    setVoiceBtnState(button, false);
+  }
+  function isGuideAudioPlaying() { return guideAudio.playing; }
+
+  /* 按钮右侧直接标出「这段声音从哪来」，一眼可辨：
+     离线真人音 = 播放预生成的 MP3；浏览器合成音 = Web Speech 实时合成 */
+  function voiceSrcLabel(forceTts) {
+    if (forceTts) return '浏览器合成音';
+    try { if (readTtsPref().mode === 'tts') return '浏览器合成音'; } catch (e) {}
+    return '离线真人音';
+  }
+  function voiceIdleHtml(forceTts) {
+    return '<span class="voice-play">▶</span><span class="voice-label">开始讲解</span>' +
+      '<span class="voice-en">' + voiceSrcLabel(forceTts) + '</span>';
+  }
+  function voicePlayHtml(forceTts) {
+    return '<span class="voice-play">■</span><span class="voice-label">停止讲解</span>' +
+      '<span class="voice-en">' + voiceSrcLabel(forceTts) + '</span>';
+  }
+
+  function setVoiceBtnState(button, playing, forceTts) {
+    if (!button) return;
+    if (playing) {
+      button.classList.add('playing');
+      button.innerHTML = voicePlayHtml(forceTts);
+    } else {
+      button.classList.remove('playing');
+      button.innerHTML = voiceIdleHtml(forceTts);
+    }
+  }
+
   function speakSite(site, button, overrideText) {
-    const IDLE_HTML = '<span class="voice-play">▶</span><span class="voice-label">开始讲解</span><span class="voice-en">VOICE GUIDE</span>';
-    const PLAY_HTML = '<span class="voice-play">■</span><span class="voice-label">停止讲解</span><span class="voice-en">VOICE GUIDE</span>';
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
       toast('当前浏览器暂不支持语音讲解');
       return;
     }
     if (window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
-      if (button) {
-        button.classList.remove('playing');
-        button.innerHTML = IDLE_HTML;
-      }
+      stopTtsKeepAlive();
+      setVoiceBtnState(button, false, true);
       return;
     }
     const text = overrideText || [site.name, site.aliases, site.desc].filter(Boolean).join('。');
     const utterance = new SpeechSynthesisUtterance(text || site.name);
-    utterance.lang = 'zh-CN';
-    utterance.rate = 0.92;
-    utterance.pitch = 1;
-    if (button) {
-      button.classList.add('playing');
-      button.innerHTML = PLAY_HTML;
+    const ttsPref = readTtsPref();
+    const ttsVoice = pickTtsVoice(ttsPref);
+    if (ttsVoice) {
+      utterance.voice = ttsVoice;
+      utterance.lang = ttsVoice.lang || 'zh-CN';
+    } else {
+      utterance.lang = 'zh-CN';
     }
+    utterance.rate = ttsPref.rate || TTS_FALLBACK.rate;
+    utterance.pitch = ttsPref.pitch || TTS_FALLBACK.pitch;
+    setVoiceBtnState(button, true, true);
     const reset = () => {
-      if (!button) return;
-      button.classList.remove('playing');
-      button.innerHTML = IDLE_HTML;
+      stopTtsKeepAlive();
+      setVoiceBtnState(button, false, true);
     };
     utterance.onend = reset;
     utterance.onerror = reset;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
+    startTtsKeepAlive();
+  }
+
+  /* Chrome/Edge 的老问题：连续朗读超过约 15 秒会被静默掐断。
+     讲解词普遍较长，用 pause/resume 心跳续命（对短文本无害）。 */
+  var ttsKeepAliveTimer = null;
+  function startTtsKeepAlive() {
+    stopTtsKeepAlive();
+    ttsKeepAliveTimer = setInterval(() => {
+      if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+        stopTtsKeepAlive();
+        return;
+      }
+      try {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      } catch (e) { /* 部分浏览器不支持 pause/resume，忽略 */ }
+    }, 9000);
+  }
+  function stopTtsKeepAlive() {
+    if (ttsKeepAliveTimer) {
+      clearInterval(ttsKeepAliveTimer);
+      ttsKeepAliveTimer = null;
+    }
   }
 
   function openGuideDialog(site, categoryName) {
     if (!site) return;
     const guide = AREA_GUIDES[categoryName] || AREA_GUIDES['生活配套'];
-    const stepsHtml = (guide.steps || []).map((s, i) =>
+    const dataGuide = ((window.GLU_DATA || {}).guides || {})[site.guideKey] || null;
+    const showSteps = !guide.hideSteps && (guide.steps || []).length > 0;
+    const stepsHtml = showSteps ? (guide.steps || []).map((s, i) =>
       '<div class="explain-step"><span class="step-num">' + String(i + 1).padStart(2, '0') + '</span>' +
       '<strong class="step-title">' + esc(s.t) + '</strong></div>'
-    ).join('<span class="step-arrow">→</span>');
+    ).join('<span class="step-arrow">→</span>')
+      : '<div class="explain-steps-empty"></div>';
+    const stepsBlock = showSteps
+      ? '<div class="explain-process-head"><span>参观重点</span><span class="process-en">PROCESS</span></div>' +
+        '<div class="explain-steps">' + stepsHtml + '</div>'
+      : '';
+    // 该点位有没有预生成的离线 MP3：有就播真人离线音，没有才回退浏览器合成
+    const hasOfflineAudio = !!(site.guideKey && guideAudioFiles(site.guideKey));
+    const voiceBlock = guide.hideVoice ? '' :
+      '<button class="voice-btn explain-voice explain-voice-mid" id="explainVoiceBtn" type="button">' +
+      voiceIdleHtml(!hasOfflineAudio) +
+      '</button>';
+    const sectionsHtml = (dataGuide && (dataGuide.sections || []).length)
+      ? '<div class="explain-process-head"><span>讲解内容</span><span class="process-en">GUIDE</span></div>' +
+        '<div class="explain-sections">' + dataGuide.sections.map((s) =>
+          '<div class="explain-section"><div class="explain-section-title">' + esc(s.t) + '</div>' +
+          '<p class="explain-section-text">' + esc(s.d) + '</p></div>'
+        ).join('') + '</div>'
+      : '';
 
     $('#modalTitle').textContent = '';
     $('#modalBox').classList.add('explain-mode');
     $('#modalBody').innerHTML =
       '<button class="explain-close" id="explainClose" type="button">×</button>' +
       '<div class="explain-hero">' +
-      '<img class="explain-bg" src="' + esc(site.img) + '" alt="" />' +
+      '<img class="explain-bg" src="' + esc(site.img || DEFAULT_SITE_IMG) + '" alt="" />' +
       '<div class="explain-overlay"></div>' +
       '<div class="explain-head">' +
-      '<span class="explain-kicker">' + esc(guide.en || 'AREA') + '</span>' +
+      '<span class="explain-kicker">' + esc((dataGuide && dataGuide.en) || guide.en || 'AREA') + '</span>' +
       '<div class="explain-title">' + esc(site.name) + '</div>' +
-      '<div class="explain-subtitle">' + esc(guide.subtitle || site.aliases || '') + '</div>' +
+      '<div class="explain-subtitle">' + esc((dataGuide && dataGuide.subtitle) || guide.subtitle || site.aliases || '') + '</div>' +
       '</div>' +
       '</div>' +
       '<div class="explain-content">' +
       '<p class="explain-desc">' + esc(site.desc || '暂无详细介绍') + '</p>' +
-      '<div class="explain-process-head"><span>参观重点</span><span class="process-en">PROCESS</span></div>' +
-      '<div class="explain-steps">' + stepsHtml + '</div>' +
-      '<button class="voice-btn explain-voice" id="explainVoiceBtn" type="button">' +
-      '<span class="voice-play">▶</span><span class="voice-label">开始讲解</span><span class="voice-en">VOICE GUIDE</span>' +
-      '</button>' +
+      stepsBlock +
+      voiceBlock +
+      sectionsHtml +
       '</div>';
     $('#modalFooter').innerHTML = '';
     $('#modalMask').classList.add('show');
@@ -1129,13 +1872,27 @@
     $('#explainClose').addEventListener('click', hideModal);
     const voiceBtn = $('#explainVoiceBtn');
     if (voiceBtn) {
-      const guideText = [
-        site.name,
-        guide.subtitle,
-        site.desc,
-        '参观重点：' + (guide.steps || []).map((s, i) => (i + 1) + '. ' + s.t + '，' + s.d).join('；')
-      ].filter(Boolean).join('。');
-      voiceBtn.addEventListener('click', () => speakSite(site, voiceBtn, guideText));
+      const guideText = dataGuide
+        ? [
+            site.name,
+            dataGuide.subtitle,
+            site.desc,
+            (dataGuide.sections || []).map((s) => s.t + '：' + s.d).join('；')
+          ].filter(Boolean).join('。')
+        : [
+            site.name,
+            guide.subtitle,
+            site.desc,
+            showSteps ? ('参观重点：' + (guide.steps || []).map((s, i) => (i + 1) + '. ' + s.t + '，' + s.d).join('；')) : ''
+          ].filter(Boolean).join('。');
+      voiceBtn.addEventListener('click', () => {
+        // 只要该点位有离线 MP3，永远优先播 MP3（不受试音台"浏览器音色"选择影响）；
+        // MP3 缺失或首段播放失败时才回退浏览器合成。
+        if (isGuideAudioPlaying()) { stopGuideAudio(voiceBtn); return; }
+        if (site.guideKey &&
+            playGuideAudio(site.guideKey, voiceBtn, () => speakSite(site, voiceBtn, guideText))) return;
+        speakSite(site, voiceBtn, guideText);
+      });
     }
   }
 
@@ -1165,6 +1922,81 @@
     $('#mapBottomBtn').classList.add('hidden');
   }
 
+  /* =========================================================
+     定位后的基地自动切换（电子围栏）
+     ========================================================= */
+  /* 判定半径：定位落在这个距离内算「到了该基地」，否则兜底回淮北基地大门 */
+  const CAMPUS_GEOFENCE_KM = 30;
+  // 本次定位是否已经给出过提示：为真时让位给新提示，避免与「不在厂区内」的旧提示重复弹
+  let locationNoticeShown = false;
+
+  function haversineKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const rad = (d) => d * Math.PI / 180;
+    const dLat = rad(lat2 - lat1);
+    const dLng = rad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+      + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+
+  /* 落在任一基地 CAMPUS_GEOFENCE_KM 公里内 → 返回最近的那个基地下标；都不在 → -1 */
+  function campusIndexNear(lat, lng) {
+    let best = -1;
+    let bestKm = Infinity;
+    (MAP.site_data || []).forEach((c, i) => {
+      if (!Number.isFinite(c.latitude) || !Number.isFinite(c.longitude)) return;
+      const km = haversineKm(lat, lng, c.latitude, c.longitude);
+      if (km < bestKm) { bestKm = km; best = i; }
+    });
+    return (best >= 0 && bestKm <= CAMPUS_GEOFENCE_KM) ? best : -1;
+  }
+
+  /* 兜底基地（淮北）：先按 base_name/name 含「淮北」，再按 id===1，最后退回 index 0 */
+  function fallbackCampusIndex() {
+    const list = MAP.site_data || [];
+    const byName = list.findIndex((c) => ((c.base_name || '') + (c.name || '')).indexOf('淮北') >= 0);
+    if (byName >= 0) return byName;
+    const byId = list.findIndex((c) => c.id === 1);
+    return byId >= 0 ? byId : 0;
+  }
+
+  /* 视角落到当前基地的「工厂大门」（state.mapDefaultPoint，由 defaultPointOf 算出） */
+  function focusDefaultGate() {
+    const def = state.mapDefaultPoint;
+    if (map && def && Number.isFinite(def.latitude) && Number.isFinite(def.longitude)) {
+      // 与搜索页「定位」同一把锁：别让 watchPosition 的首次居中把刚定好的大门视角抢走
+      state.focusLock = Date.now() + 3000;
+      map.setView([def.latitude, def.longitude], FOCUS_ZOOM);
+    }
+  }
+
+  /* 定位成功后按电子围栏自动选基地：
+     · 在任一基地 30km 内 → 切到该基地（已在就什么都不做）
+     · 都不在         → 提示 + 切回淮北基地，视角落到工厂大门
+     force=true（用户点了右侧定位按钮）时强制重判；否则只在首次定位成功时判一次，
+     之后用户手动选的基地不会被 watchPosition 的后续刷新抢走。 */
+  function resolveCampusByLocation(lat, lng, force) {
+    locationNoticeShown = false;
+    if (state.campusResolved && !force) return;
+    state.campusResolved = true;
+    const idx = campusIndexNear(lat, lng);
+    if (idx >= 0) {
+      if (idx !== state.campus) {
+        switchCampus(idx);
+        locationNoticeShown = true;
+        toast('已定位到' + campusLabel(MAP.site_data[idx]) + '附近，自动切换到该基地', 2400);
+      }
+      return;
+    }
+    const hb = fallbackCampusIndex();
+    if (state.campus !== hb) switchCampus(hb);
+    focusDefaultGate();
+    locationNoticeShown = true;
+    toast('当前位置不在任一基地 ' + CAMPUS_GEOFENCE_KM + ' 公里内\n已切换到'
+      + campusLabel(MAP.site_data[hb]) + '工厂大门', 3200);
+  }
+
   function locateMe() {
     const apply = (lat, lng) => {
       const test = { latitude: lat, longitude: lng };
@@ -1177,9 +2009,10 @@
         state.mapIsAtSchool = false;
         const def = state.mapDefaultPoint;
         if (def) {
-          state.start = { name: def.name, latitude: def.latitude, longitude: def.longitude };
+          state.start = defaultStartOf(def);
           syncMapInputs();
-          toast('当前位置不在厂区内\n默认位置设为' + def.name, 2200);
+          // 围栏逻辑已经提示过「不在任一基地 30 公里内」时不再重复提示
+          if (!locationNoticeShown) toast('当前位置不在厂区内\n默认位置设为' + def.name, 2200);
         }
         renderCategoryMarkers();
       }
@@ -1195,28 +2028,54 @@
       return (rawIn && !gcjIn) ? raw : gcj;
     };
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 };
+      locationDebug('调用 navigator.geolocation.getCurrentPosition', {
+        method: 'getCurrentPosition(success, error, options)',
+        source: '地图初始化定位',
+        options,
+      });
+      const initialPositionReturn = navigator.geolocation.getCurrentPosition(
         (pos) => {
+          locationDebug('getCurrentPosition 成功回调返回值', {
+            position: pos,
+            coords: pos && pos.coords,
+            timestamp: pos && pos.timestamp,
+          });
+          markLocationResolved();
           const c = toMapCoords(pos.coords.latitude, pos.coords.longitude);
+          // 先按 30km 围栏定基地（可能切基地并重置 state.mapPoints/默认点），再判断是否在厂区内
+          resolveCampusByLocation(c.latitude, c.longitude);
           apply(c.latitude, c.longitude);
+          requestOrientationAfterLocation('navigator.geolocation.getCurrentPosition（地图初始化）');
         },
         (err) => {
           state.mapIsAtSchool = false;
           const def = state.mapDefaultPoint;
-          if (def) state.start = { name: def.name, latitude: def.latitude, longitude: def.longitude };
+          if (def) state.start = defaultStartOf(def);
           syncMapInputs();
           renderCategoryMarkers();
-          showLocationError(err);
+          handleLocError(err, 'navigator.geolocation.getCurrentPosition（地图初始化）');
           toast('已使用默认位置：' + (def ? def.name : '默认点'), 2200);
         },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
+        options
       );
+      locationDebug('getCurrentPosition 方法同步返回值', {
+        returnValue: initialPositionReturn,
+        returnType: typeof initialPositionReturn,
+      });
     } else {
       const def = state.mapDefaultPoint;
-      if (def) state.start = { name: def.name, latitude: def.latitude, longitude: def.longitude };
+      if (def) state.start = defaultStartOf(def);
       syncMapInputs();
       renderCategoryMarkers();
-      showLocationError({ message: '当前浏览器不支持 Geolocation API' });
+      locationDebugWarn('地图初始化定位失败：navigator.geolocation 不存在', {
+        method: 'navigator.geolocation.getCurrentPosition',
+        returnValue: undefined,
+      });
+      handleLocError(
+        { message: '当前浏览器不支持 Geolocation API' },
+        'navigator.geolocation.getCurrentPosition（地图初始化）'
+      );
       toast('已使用默认位置：' + (def ? def.name : '默认点'), 2200);
     }
   }
@@ -1465,38 +2324,96 @@
     }
   }
 
+  /* 切换基地（地图页顶部胶囊 / 基地介绍页右上角 / 搜索页切换共用）。
+     两页共用 state.campus，切一次两页同步刷新。因为底部「青州地图」tab 已移除，
+     这里不再走 hash 路由 —— 否则切换基地会顺带把页面跳来跳去。 */
   function switchCampus(i) {
-    state.mapCampus = i;
-    applyCampus();
-    syncMapInputs();
-    if (map) map.invalidateSize();
+    const next = Number(i) || 0;
+    if (next === state.campus) return;
+    state.campus = next;
+
+    // 地图页可见时立刻重载数据、标记与起终点；
+    // 地图页不可见时什么都不做，回到地图页由 onMapShow 按 appliedCampus 差异自动重载
+    // （避免在 display:none 的容器上 invalidateSize 把尺寸量成 0）
+    const mapPage = $('#page-map');
+    if (state.mapInited && map && mapPage && mapPage.classList.contains('active')) {
+      applyCampus();
+      renderGuideRoute(mapCampusData());
+      syncMapInputs();
+      map.invalidateSize();
+    }
+    // 基地介绍页：分类回到第一个并重绘
+    state.siteCategory = 0;
+    if (siteRendered) {
+      updateSiteCampusBtn();
+      renderSiteCategory();
+    }
   }
 
   function syncMapInputs() {
-    $('#mapStartInput').value = state.start.name || '当前地点/起点';
-    $('#mapEndInput').value = state.end.name || '请选择终点';
+    const startInput = $('#mapStartInput');
+    const endInput = $('#mapEndInput');
+    if (!startInput || !endInput) return;
+    startInput.value = state.start.name || '当前地点/起点';
+    endInput.value = state.end.name || '请选择终点';
     // 搜索页跟随当前地图 tab 的厂区
-    $('#mapStartInput').onclick = () => { state.choose = state.mapCampus; state.searchTarget = 1; location.hash = '#/search?id=1'; };
-    $('#mapEndInput').onclick = () => { state.choose = state.mapCampus; state.searchTarget = 0; location.hash = '#/search?id=0'; };
+    startInput.onclick = () => { state.searchTarget = 1; location.hash = '#/search?id=1'; };
+    endInput.onclick = () => { state.searchTarget = 0; location.hash = '#/search?id=0'; };
   }
 
   /* =========================================================
      搜索页
      ========================================================= */
+  /* 搜索页图标全部内联 SVG，不再依赖任何外部图片。
+     原来「搜索结果」的标题图标走的是 data.js 里 media.searchIcon —— 那是个外链
+     （https://ico.dongtiyan.com/tu-99.png），外网不通时就是一个破图；
+     而且 MEDIA.searchIcon 为空时还会渲染成 <img src=""> ，同样是破图。
+     「搜索历史」的时钟图标原本是栅格 png（assets/images/history.png），
+     一起换成同风格矢量图标，两个标题样式才统一。 */
+  const SEARCH_SVG = {
+    search: '<svg class="shi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.9-3.9"/></svg>',
+    clock: '<svg class="shi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.2v5.2l3.4 1.9"/></svg>',
+    trash: '<svg class="shi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 7h15"/><path d="M9.5 7V4.8h5V7"/><path d="M6.6 7l.9 12.2h9l.9-12.2"/><path d="M10.2 10.6v5.2M13.8 10.6v5.2"/></svg>',
+    empty: '<svg class="shi shi-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.9-3.9"/><path d="M8.2 11h5.6"/></svg>',
+    arrow: '<svg class="ri-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>',
+    locate: '<svg class="shi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="6.1"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><path d="M12 2.4v3.4M12 18.2v3.4M2.4 12h3.4M18.2 12h3.4"/></svg>',
+  };
+
   function renderSearch() {
     $('#searchRoot').innerHTML =
-      (MAP.site_data.length > 1 ? '<button class="picker" id="searchCampusBtn">' + esc(state.campus_name_list[state.choose] || currentCampus().name) + '</button>' : '') +
-      '<input class="search-input" id="searchInput" placeholder="请输入要搜索的地点" style="flex:1 1 0;min-width:0;width:0" />' +
-      '<button class="search-go" id="searchGo" style="flex:0 0 auto;white-space:nowrap">搜索</button>';
+      '<div class="search-bar">' +
+      (MAP.site_data.length > 1
+        ? '<button class="picker search-campus" id="searchCampusBtn" type="button">' +
+          esc(campusLabel(mapCampusData()) || state.campus_name_list[state.campus]) + '</button>'
+        : '') +
+      '<label class="search-field">' + SEARCH_SVG.search +
+      '<input class="search-input" id="searchInput" placeholder="请输入要搜索的地点" autocomplete="off" />' +
+      '<button class="search-clear" id="searchClear" type="button" aria-label="清空输入">×</button>' +
+      '</label>' +
+      '<button class="search-go" id="searchGo" type="button">搜索</button>' +
+      '</div>';
 
     const cb = $('#searchCampusBtn');
-    if (cb) cb.addEventListener('click', () => showCampusPicker((i) => { state.choose = i; renderSearch(); }));
+    if (cb) cb.addEventListener('click', () => showCampusPicker(
+      (i) => { switchCampus(i); renderSearch(); },
+      { labels: MAP.site_data.map((s) => s.base_name || s.name), current: state.campus }
+    ));
 
     $('#searchGo').addEventListener('click', goSearch);
     const inp = $('#searchInput');
+    const clr = $('#searchClear');
+    const syncClear = () => clr.classList.toggle('show', !!inp.value);
     inp.value = state.searchContent || '';
+    syncClear();
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') goSearch(); });
-    inp.addEventListener('input', () => { state.searchContent = inp.value; });
+    inp.addEventListener('input', () => { state.searchContent = inp.value; syncClear(); });
+    clr.addEventListener('click', () => {
+      inp.value = '';
+      state.searchContent = '';
+      syncClear();
+      $('#searchResult').innerHTML = '';
+      inp.focus();
+    });
 
     renderSearchHistory();
     $('#searchResult').innerHTML = '';
@@ -1506,15 +2423,27 @@
     const hist = getHistory();
     const box = $('#searchHistory');
     if (!hist.length) {
-      box.innerHTML = '<div class="headline"><img src="' + asset(MEDIA.history) + '" alt="" /><span class="title">搜索历史</span></div><div class="no-content">搜索历史为空</div>';
+      box.innerHTML =
+        '<div class="search-panel">' +
+        '<div class="headline">' + SEARCH_SVG.clock +
+        '<span class="title">搜索历史</span></div>' +
+        '<div class="no-content">还没有搜索记录</div>' +
+        '</div>';
       return;
     }
     box.innerHTML =
-      '<div class="headline"><img src="' + asset(MEDIA.history) + '" alt="" /><span class="title">搜索历史</span><img src="' + asset(MEDIA.delete) + '" id="clearHist" alt="清除" style="cursor:pointer" /></div>' +
-      '<div class="search-chunks">' + hist.map((h) => '<span class="search-chunk" data-q="' + esc(h) + '">' + esc(h) + '</span>').join('') + '</div>';
+      '<div class="search-panel">' +
+      '<div class="headline">' + SEARCH_SVG.clock +
+      '<span class="title">搜索历史</span>' +
+      '<span class="headline-count">' + hist.length + '</span>' +
+      '<button class="headline-act" id="clearHist" type="button" aria-label="清空搜索历史">' + SEARCH_SVG.trash + '</button>' +
+      '</div>' +
+      '<div class="search-chunks">' + hist.map((h) => '<span class="search-chunk" data-q="' + esc(h) + '">' + esc(h) + '</span>').join('') + '</div>' +
+      '</div>';
     $('#clearHist').addEventListener('click', clearHistory);
     $$('.search-chunk', box).forEach((c) => c.addEventListener('click', () => {
-      $('#searchInput').value = c.dataset.q;
+      const inp = $('#searchInput');
+      if (inp) inp.value = c.dataset.q;
       state.searchContent = c.dataset.q;
       goSearch();
     }));
@@ -1533,45 +2462,104 @@
   function clearHistory() {
     localStorage.removeItem('glu_history');
     renderSearchHistory();
+    toast('搜索历史已清空', 1400);
   }
 
   function goSearch() {
-    const content = ($('#searchInput').value || '').trim();
+    const inp = $('#searchInput');
+    const content = ((inp && inp.value) || '').trim();
     state.searchContent = content;
-    const site_data = currentSiteData();
-    const result = [];
-    if (content) {
-      saveHistory(content);
-      for (const cat of site_data) {
-        for (const p of cat.list) {
-          if ((p.name && p.name.match(content)) || (p.aliases && p.aliases.match(content))) result.push(p);
-        }
-      }
-      renderSearchResult(result);
-      if (!result.length) toast('未找到结果');
-    } else {
-      toast('请输入内容');
+    if (!content) {
+      toast('请输入要搜索的地点');
+      if (inp) inp.focus();
+      return;
     }
+    saveHistory(content);
+    renderSearchHistory();   // 立刻把新关键词显示在历史里
+    const keyword = content.toLowerCase();
+    const result = [];
+    // 搜索池 = 地图页的分类（siteOnly 分类没有坐标，不进池）。
+    // 一并记住点位所属分类名：结果弹窗（openGuideDialog）与地图标记配色都按分类名取，
+    // 合并出来的「生产车间」点位自带 _catName（来源分类），要优先用它。
+    mapSiteData().forEach((cat) => {
+      (cat.list || []).forEach((p) => {
+        const name = p.name ? String(p.name).toLowerCase() : '';
+        const aliases = p.aliases ? String(p.aliases).toLowerCase() : '';
+        if (name.indexOf(keyword) !== -1 || aliases.indexOf(keyword) !== -1) {
+          result.push({ site: p, catName: p._catName || cat.name });
+        }
+      });
+    });
+    renderSearchResult(result);
+    const clr = $('#searchClear');
+    if (clr) clr.classList.toggle('show', !!content);
   }
 
   function renderSearchResult(result) {
     const box = $('#searchResult');
-    let html = '<div class="headline"><img src="' + (MEDIA.searchIcon ? asset(MEDIA.searchIcon) : '') + '" alt="" /><span>搜索结果</span></div>';
-    if (result.length) {
-      html += result.map((p) => '<div class="result-item"><div class="name">' + esc(p.name) + '</div><div class="alias">' + esc(p.aliases || '') + '</div></div>').join('');
-      box.innerHTML = html;
-      $$('.result-item', box).forEach((el, i) => el.addEventListener('click', () => {
-        const p = result[i];
-        if (state.searchTarget === 1) state.start = { name: p.name, latitude: p.latitude, longitude: p.longitude };
-        else state.end = { name: p.name, latitude: p.latitude, longitude: p.longitude };
-        hideSub();
-        // 从「青州地图」发起的搜索，选完点后回到「青州地图」
-        location.hash = state.tab === 'qingzhou-map' ? '#/qingzhou-map' : '#/map';
-        syncMapInputs();
-      }));
-    } else {
-      box.innerHTML = html + '<div class="result-empty">抱歉，没有找到您想找的地点</div>';
+    const head =
+      '<div class="headline">' + SEARCH_SVG.search +
+      '<span class="title">搜索结果</span>' +
+      (result.length ? '<span class="headline-count">' + result.length + '</span>' : '') +
+      '</div>';
+
+    if (!result.length) {
+      box.innerHTML =
+        '<div class="search-panel">' + head +
+        '<div class="result-empty">' + SEARCH_SVG.empty +
+        '<p>没有找到「' + esc(state.searchContent || '') + '」相关的地点</p>' +
+        '<span>换个关键词试试，例如「车间」「仓库」「餐厅」</span>' +
+        '</div></div>';
+      return;
     }
+
+    box.innerHTML =
+      '<div class="search-panel">' + head +
+      '<div class="result-list">' +
+      result.map((r, i) =>
+        '<div class="result-item" data-i="' + i + '">' +
+        '<span class="ri-idx">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<div class="ri-main">' +
+        '<div class="name">' + esc(r.site.name) + '</div>' +
+        '<div class="alias">' + esc(r.site.aliases || r.catName || '') + '</div>' +
+        '</div>' +
+        '<button class="ri-locate" data-i="' + i + '" type="button">' +
+        SEARCH_SVG.locate + '<span>定位</span>' +
+        '</button>' +
+        SEARCH_SVG.arrow +
+        '</div>').join('') +
+      '</div>' +
+      '<div class="result-foot">轻点结果可查看该区域讲解，点「定位」可在地图上找到它</div>' +
+      '</div>';
+
+    // 点整行 = 与「地图讲解」页点击点位完全相同的讲解弹窗
+    $$('.result-item', box).forEach((el) => {
+      const r = result[Number(el.dataset.i)];
+      el.addEventListener('click', () => openGuideDialog(r.site, r.catName));
+    });
+    // 「定位」：以该点位为中心回到「地图讲解」页
+    $$('.ri-locate', box).forEach((btn) => btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const r = result[Number(btn.dataset.i)];
+      focusSearchPoint(r.site, r.catName);
+    }));
+  }
+
+  /* 搜索结果「定位」：记住目标点位，回到「地图讲解」页后以它为中心。
+     记住之后由 onMapShow() 里的 applyPendingFocus() 统一落地 —— 因为回到地图页时
+     可能还要先按基地差异重载数据、重绘标记，视角必须在这些之后才定。 */
+  function focusSearchPoint(p, catName) {
+    if (!p || !p.latitude) return;
+    state.focusPoint = {
+      latitude: Number(p.latitude),
+      longitude: Number(p.longitude),
+      name: p.name,
+      category: displayCategoryIndexFor(p, catName),   // 该点位在地图分类条里的位置
+    };
+    hideSub();
+    // hash 没变（已经在 #/map）时不会触发 hashchange，手动走一次
+    if (location.hash === '#/map') onMapShow();
+    else location.hash = '#/map';
   }
 
   /* =========================================================
@@ -1580,15 +2568,14 @@
   function renderInstruction(name) {
     $('#instructionBody').innerHTML =
       '<div class="instruction-card"><div class="instruction-h"><img src="' + asset(MEDIA.map) + '" alt="" /><span>使用说明</span></div>' +
-      '<div class="instruction-txt">&emsp;&emsp;“地点汇总”页展示了各地点类型的地点，可切换地点类型查看。点击可以查看地点介绍，设置为起点或终点并跳转到地图。</div>' +
-      '<button class="instruction-btn" id="instrSite">去“地点汇总”页</button>' +
-      '<div class="instruction-txt">&emsp;&emsp;“地图”页展示了厂区地图，可以在地图上选择地点或者搜索地点进行导航。</div>' +
-      '<div class="instruction-row top"><div class="k">定位</div><div class="v">点击定位图标可以重新定位<br/>若不在厂区，设置 ' + esc(name || '默认地点') + ' 为起点</div></div>' +
-      '<div class="instruction-row"><div class="k">搜索</div><div class="v">点击搜索栏起点 / 终点输入框<br/>即可跳转到对应搜索页</div></div>' +
-      '<div class="instruction-row"><div class="k">点击</div><div class="v">地点类型栏可以滑动点击<br/>点击地点可查看信息，并设为起点/终点<br/>点击底部可查看当前地点类型地点或路线信息</div></div>' +
-      '<div class="instruction-row"><div class="k">导航</div><div class="v">点击路线按钮即可进行导航<br/>点击切换图标即可对调起点和终点</div></div>' +
+      '<div class="instruction-txt">&emsp;&emsp;“基地介绍”页展示了各地点类型的地点，可切换地点类型查看。点击可以查看地点讲解，搜索里点“定位”还能直接在地图上找到它。</div>' +
+      '<button class="instruction-btn" id="instrSite">去“基地介绍”页</button>' +
+      '<div class="instruction-txt">&emsp;&emsp;“地图讲解”页展示了厂区地图，可以在地图上选择地点或者搜索地点进行导航。</div>' +
+      '<div class="instruction-row top"><div class="k">定位</div><div class="v">点击定位图标可以重新定位<br/>若不在厂区，默认位置为 ' + esc(name || '默认地点') + '</div></div>' +
+      '<div class="instruction-row"><div class="k">搜索</div><div class="v">点击顶部“搜索地点”查找厂区地点<br/>结果里点“定位”可在地图上找到它</div></div>' +
+      '<div class="instruction-row"><div class="k">点击</div><div class="v">地点类型栏可以滑动点击<br/>点击地点可查看讲解信息<br/>点击底部可查看当前地点类型地点</div></div>' +
       '<div class="instruction-txt" style="margin-top:14px">&emsp;&emsp;你学会了吗，快去试试吧！</div>' +
-      '<button class="instruction-btn" id="instrMap">去“地图”页</button>' +
+      '<button class="instruction-btn" id="instrMap">去“地图讲解”页</button>' +
       '</div>';
     $('#instrSite').addEventListener('click', () => { hideSub(); location.hash = '#/site'; });
     $('#instrMap').addEventListener('click', () => { hideSub(); location.hash = '#/map'; });
@@ -1642,7 +2629,7 @@
 
   /* ---------- 启动 ---------- */
   function start() {
-    navigate(location.hash || '#/home');
+    navigate(location.hash || '#/map');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

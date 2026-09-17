@@ -1,0 +1,108 @@
+
+=== A. 搜索栏渲染（不再有外链破图） ===
+PASS  searchRoot 用新的 .search-bar 结构
+PASS  输入框包进 .search-field（带放大镜图标）
+PASS  有清空按钮 .search-clear
+PASS  基地按钮显示基地名（英科医疗淮北基地）
+PASS  搜索栏内没有任何 <img>
+PASS  清空按钮默认不显示（无 show 类）
+
+=== B. 「搜索结果」「搜索历史」标题不含 <img>，改用内联 SVG ===
+PASS  搜索历史标题有内联 svg
+PASS  搜索历史标题不含 <img>
+PASS  历史条目渲染成 .search-chunk
+PASS  有清空历史的按钮 #clearHist
+PASS  搜索结果标题用内联 svg
+PASS  搜索结果不含 <img>
+PASS  结果条数徽标存在
+
+=== C. 点整行 → 打开与地图页相同的讲解弹窗 ===
+PASS  渲染出 6 条丁腈车间结果
+PASS  结果行带序号徽标
+PASS  每行一个「定位」按钮
+PASS  「定位」按钮带图标与文案
+PASS  不再有「起点 / 终点」按钮
+PASS  点第 1 行触发了讲解弹窗
+PASS  弹窗拿到的是「丁腈车间1」
+PASS  弹窗分类名正确（丁腈车间）
+PASS  点第 6 行也是弹窗且名字正确
+PASS  点行不会误改起终点
+
+=== D. 合并分类「生产车间」的点位要带来源分类名 ===
+PASS  地图侧存在「生产车间」分类
+PASS  合并分类里的点弹窗分类名仍是「丁腈车间」
+
+=== E. 行内「定位」按钮 ===
+PASS  渲染出了「定位」按钮
+PASS  关掉搜索子页
+PASS  回到「地图讲解」页（#/map）
+PASS  点了「定位」不会走 onMapShow 的额外分支（hash 变了靠 hashchange）
+PASS  记下待定位点位
+PASS  坐标取自点位本身
+PASS  分类下标 = 「生产车间」在分类条上的位置（跳过虚拟「全部」）
+PASS  点「定位」不改动起终点
+
+=== F. 待定位点位落地（onMapShow 末尾的 applyPendingFocus） ===
+PASS  地图视角移到该点位
+PASS  放大到 FOCUS_ZOOM=18
+PASS  当前是「全部」（什么都可见）→ 不擅自改分类
+PASS  落地前先 invalidateSize（避免量成 0）
+PASS  有「已定位到 XX」toast
+PASS  设置了 focusLock，watchPosition 首次居中会让位
+PASS  消费后清空待定位点位
+PASS  没有待定位点位时不再动视角 / 不重绘
+
+=== G. 当前分类看不到该点位时才切分类 ===
+PASS  切到点位所属分类
+PASS  分类条高亮唯一且落在该分类
+PASS  切分类后重绘了标记
+PASS  并且以该点位为中心
+
+=== H. 已经在 #/map 时（hash 不变）要手动触发一次 ===
+PASS  hash 未变时手动调用 onMapShow
+PASS  点位已记下
+PASS  仍然以该点位为中心
+
+=== I. 分类下标助手：不能命中虚拟「全部」 ===
+PASS  任何点位都不会返回 0（0 = 全部）
+PASS  合并分类里的点按来源分类名匹配
+PASS  分类名对不上时返回 -1
+
+=== J. 空输入与无结果 ===
+PASS  空关键词提示且不渲染结果
+PASS  无结果时有空态面板
+PASS  无结果时不再多弹一个 toast
+PASS  空态里回显了关键词
+
+=== K. 搜索历史 ===
+PASS  搜过之后写进了 localStorage
+PASS  新关键词插到最前
+PASS  不写重复关键词
+PASS  清空后 localStorage 无历史
+PASS  清空后提示已清空
+
+=== L. 样式与页面结构 ===
+PASS  css 含 .page-search
+PASS  css 含 .search-bar
+PASS  css 含 .search-field
+PASS  css 含 .search-clear
+PASS  css 含 .search-panel
+PASS  css 含 .result-list
+PASS  css 含 .ri-idx
+PASS  css 含 .ri-locate
+PASS  css 含 .result-empty
+PASS  css 含 .result-foot
+PASS  「定位」按钮用蓝调（区别于原来的灰绿胶囊）
+PASS  旧的 .ri-acts / .ri-act 样式已清除
+PASS  搜索子页可滚动
+PASS  搜索标题栏吸顶
+PASS  底部给 TabBar 留位
+PASS  旧样式 .search-history .headline img 已移除
+PASS  index.html 仍含 #page-search 三个容器
+PASS  app.js 里搜索页已无 MEDIA.history / MEDIA.delete / MEDIA.searchIcon 引用（注释除外）
+PASS  data.js 的 media.searchIcon 仍指向外链（已不再被页面引用，留作备查）
+PASS  onMapShow 末尾会落地待定位点位（视角必须在重载数据之后定）
+PASS  首次进入地图页（initMap 之后）也会落地
+PASS  watchPosition 的首次居中会给 focusLock 让位
+
+✅ 全部通过

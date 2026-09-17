@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>语音播放自检 · 安徽英科医疗导航</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0 14px 60px; background: #f2f7f8; color: #23454e;
+      font-family: "Microsoft YaHei", system-ui, sans-serif; }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 19px; margin: 20px 0 6px; color: #17505c; }
+    .sub { font-size: 12.5px; color: #6b8b93; line-height: 1.7; }
+    .card { background: #fff; border: 1px solid #e2edee; border-radius: 14px; padding: 14px;
+      margin-top: 14px; box-shadow: 0 6px 16px rgba(26, 75, 81, .06); }
+    .card h2 { font-size: 14px; margin: 0 0 10px; color: #1f7081; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    button { border: 0; border-radius: 16px; padding: 8px 14px; font-size: 13px; font-weight: 700;
+      color: #fff; background: linear-gradient(135deg, #2a9c8e, #1f7081); cursor: pointer; }
+    button.ghost { background: #f0f5f6; color: #3c6a73; border: 1px solid #d9e8ea; }
+    pre { background: #0f2f38; color: #b8e6e0; border-radius: 10px; padding: 12px;
+      font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; margin: 0; }
+    .ok { color: #0f7a5a; font-weight: 700; }
+    .bad { color: #c0392b; font-weight: 700; }
+    .warn { color: #b4702e; font-weight: 700; }
+    .kv { font-size: 13px; line-height: 2; }
+    .kv b { color: #17505c; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>语音播放自检</h1>
+    <p class="sub">这个页面会告诉你：音频文件能不能加载、能不能播、报什么错。请把下面框里的内容截图发我。</p>
+
+    <div class="card">
+      <h2>1. 环境</h2>
+      <div class="kv" id="env"></div>
+    </div>
+
+    <div class="card">
+      <h2>2. 离线真人音频（MP3）</h2>
+      <div class="row">
+        <button id="playBtn">播放测试音频</button>
+        <button class="ghost" id="stopBtn">停止</button>
+      </div>
+      <div class="kv" id="mp3state">尚未测试</div>
+      <div style="margin-top:10px"><pre id="log">等待测试…</pre></div>
+    </div>
+
+    <div class="card">
+      <h2>3. 浏览器语音合成（兜底方案）</h2>
+      <div class="row"><button id="ttsBtn">朗读测试句</button></div>
+      <div class="kv" id="ttsstate">尚未测试</div>
+    </div>
+
+    <div class="card">
+      <h2>4. 如果这里显示「播放成功」但你还是听不到声音</h2>
+      <div class="kv">
+        · 说明音频是正常的，问题在**播放设备/静音**：检查系统音量、蓝牙耳机连接、浏览器标签页是否被静音（标签上有个小喇叭图标）；<br />
+        · 如果本页在**内置预览窗口**里打开：内置窗口可能不转发声音，请用 <b>Edge / Chrome 直接打开 http://localhost:8000/audio-check.html</b> 再测一次。
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/audio/guides/manifest.js"></script>
+  <script>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      var VOICE = 'zh-CN-YunyangNeural';
+      var lines = [];
+      function log(s) { lines.push(s); $('log').textContent = lines.join('\n'); }
+
+      var manifest = (window.GLU_GUIDE_AUDIO || {})[VOICE] || null;
+      var files = manifest && manifest.guides && manifest.guides.exhibition
+        ? manifest.guides.exhibition.files : null;
+
+      $('env').innerHTML =
+        '<div><b>UA：</b>' + navigator.userAgent + '</div>' +
+        '<div><b>页面地址：</b>' + location.href + '</div>' +
+        '<div><b>协议：</b>' + location.protocol + '</div>' +
+        '<div><b>清单 GLU_GUIDE_AUDIO：</b>' + (manifest ? '<span class="ok">已加载</span>' : '<span class="bad">没加载到</span>') + '</div>' +
+        '<div><b>展厅音频段数：</b>' + (files ? files.length : 0) + '</div>' +
+        '<div><b>语音合成支持：</b>' + (('speechSynthesis' in window) ? '支持' : '不支持') + '</div>';
+
+      var el = new Audio();
+      el.preload = 'auto';
+      var started = false;
+
+      ['loadstart', 'loadedmetadata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'stalled', 'suspend', 'ended', 'error'].forEach(function (ev) {
+        el.addEventListener(ev, function () {
+          var extra = '';
+          if (ev === 'loadedmetadata') extra = ' 时长=' + el.duration.toFixed(2) + 's';
+          if (ev === 'error') extra = ' code=' + (el.error && el.error.code) + ' ' + (el.error && el.error.message || '');
+          if (ev === 'playing') started = true;
+          log('audio.' + ev + extra);
+          if (ev === 'playing') {
+            $('mp3state').innerHTML = '<span class="ok">播放成功</span>（已开始出声，若听不到请看第 4 条）';
+          }
+          if (ev === 'error') {
+            $('mp3state').innerHTML = '<span class="bad">播放失败</span> code=' + (el.error && el.error.code);
+          }
+        });
+      });
+
+      $('playBtn').addEventListener('click', function () {
+        if (!files || !files.length) {
+          $('mp3state').innerHTML = '<span class="bad">没有音频清单</span> 请确认用 http://localhost:8000 打开本页';
+          return;
+        }
+        started = false;
+        lines = [];
+        el.src = files[0].file;
+        el.volume = 1;
+        el.muted = false;
+        el.currentTime = 0;
+        log('尝试播放：' + files[0].file);
+        var p = el.play();
+        if (p && p.catch) {
+          p.catch(function (err) {
+            $('mp3state').innerHTML = '<span class="bad">play() 被拒绝</span> ' + (err && err.name);
+            log('play() 被拒绝：' + (err && err.name) + ' ' + (err && err.message));
+          });
+        }
+        setTimeout(function () {
+          if (!started && !el.error) {
+            log('2 秒后仍未开始出声：paused=' + el.paused + ' readyState=' + el.readyState + ' networkState=' + el.networkState);
+          }
+        }, 2000);
+      });
+      $('stopBtn').addEventListener('click', function () { el.pause(); log('手动停止'); });
+
+      $('ttsBtn').addEventListener('click', function () {
+        if (!('speechSynthesis' in window)) { $('ttsstate').innerHTML = '<span class="bad">不支持</span>'; return; }
+        var u = new SpeechSynthesisUtterance('语音合成测试，欢迎来到安徽英科医疗。');
+        u.lang = 'zh-CN';
+        var vs = window.speechSynthesis.getVoices() || [];
+        var zh = vs.filter(function (v) { return /^zh/i.test(v.lang); });
+        u.onstart = function () { $('ttsstate').innerHTML = '<span class="ok">已开始朗读</span>'; };
+        u.onend = function () { $('ttsstate').innerHTML = '<span class="ok">朗读完成</span>'; };
+        u.onerror = function (e) { $('ttsstate').innerHTML = '<span class="bad">出错</span> ' + (e && e.error); };
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+        log('TTS 音色数=' + vs.length + '，中文音色=' + zh.map(function (v) { return v.name; }).join(' / '));
+      });
+    })();
+  </script>
+</body>
+</html>

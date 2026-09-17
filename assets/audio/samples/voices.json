@@ -1,0 +1,131 @@
+{
+  "text": "欢迎来到安徽英科医疗。公司现有员工4000余人，丁腈手套有6个车间、共60条双线，日产6万箱；PVC手套6个车间，日产5.8万箱。产品远销美洲、欧洲、亚洲等120多个国家和地区。",
+  "voices": [
+    {
+      "short": "zh-CN-YunyangNeural",
+      "name": "Microsoft Yunyang Online (Natural) - Chinese (Mainland)",
+      "gender": "男",
+      "tag": "专业稳重",
+      "desc": "新闻播报腔，字正腔圆，正式讲解首选",
+      "locale": "zh-CN",
+      "file": "assets/audio/samples/zh-CN-YunyangNeural.mp3"
+    },
+    {
+      "short": "zh-CN-XiaoxiaoNeural",
+      "name": "Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)",
+      "gender": "女",
+      "tag": "温暖亲切",
+      "desc": "最自然耐听，通用首选",
+      "locale": "zh-CN",
+      "file": "assets/audio/samples/zh-CN-XiaoxiaoNeural.mp3"
+    },
+    {
+      "short": "zh-CN-YunjianNeural",
+      "name": "Microsoft Yunjian Online (Natural) - Chinese (Mainland)",
+      "gender": "男",
+      "tag": "浑厚激情",
+      "desc": "纪录片解说感，气势足",
+      "locale": "zh-CN",
+      "file": "assets/audio/samples/zh-CN-YunjianNeural.mp3"
+    },
+    {
+      "short": "zh-CN-YunxiNeural",
+      "name": "Microsoft Yunxi Online (Natural) - Chinese (Mainland)",
+      "gender": "男",
+      "tag": "阳光清亮",
+      "desc": "年轻男声，亲和路线",
+      "locale": "zh-CN",
+      "file": "assets/audio/samples/zh-CN-YunxiNeural.mp3"
+    },
+    {
+      "short": "zh-CN-XiaoyiNeural",
+      "name": "Microsoft Xiaoyi Online (Natural) - Chinese (Mainland)",
+      "gender": "女",
+      "tag": "活泼明亮",
+      "desc": "语速轻快，适合轻松场景",
+      "locale": "zh-CN",
+      "file": "assets/audio/samples/zh-CN-XiaoyiNeural.mp3"
+    },
+    {
+      "short": "zh-CN-YunxiaNeural",
+      "name": "Microsoft Yunxia Online (Natural) - Chinese (Mainland)",
+      "gender": "男",
+      "tag": "童声可爱",
+      "desc": "小男孩音色，正式场合不建议",
+      "locale": "zh-CN",
+      "file": "assets/audio/samples/zh-CN-YunxiaNeural.mp3"
+    },
+    {
+      "short": "zh-CN-liaoning-XiaobeiNeural",
+      "name": "Microsoft Xiaobei Online (Natural) - Chinese (Northeastern Mandarin)",
+      "gender": "女",
+      "tag": "东北话",
+      "desc": "方言趣味，接待活跃气氛",
+      "locale": "zh-CN-liaoning",
+      "file": "assets/audio/samples/zh-CN-liaoning-XiaobeiNeural.mp3"
+    },
+    {
+      "short": "zh-CN-shaanxi-XiaoniNeural",
+      "name": "Microsoft Xiaoni Online (Natural) - Chinese (Zhongyuan Mandarin Shaanxi)",
+      "gender": "女",
+      "tag": "陕西话",
+      "desc": "方言趣味",
+      "locale": "zh-CN-shaanxi",
+      "file": "assets/audio/samples/zh-CN-shaanxi-XiaoniNeural.mp3"
+    },
+    {
+      "short": "zh-TW-YunJheNeural",
+      "name": "Microsoft YunJhe Online (Natural) - Chinese (Taiwan)",
+      "gender": "男",
+      "tag": "台湾腔",
+      "desc": "台式国语",
+      "locale": "zh-TW",
+      "file": "assets/audio/samples/zh-TW-YunJheNeural.mp3"
+    },
+    {
+      "short": "zh-TW-HsiaoChenNeural",
+      "name": "Microsoft HsiaoChen Online (Natural) - Chinese (Taiwan)",
+      "gender": "女",
+      "tag": "台湾腔",
+      "desc": "台式国语",
+      "locale": "zh-TW",
+      "file": "assets/audio/samples/zh-TW-HsiaoChenNeural.mp3"
+    },
+    {
+      "short": "zh-TW-HsiaoYuNeural",
+      "name": "Microsoft HsiaoYu Online (Natural) - Chinese (Taiwanese Mandarin)",
+      "gender": "女",
+      "tag": "台湾腔",
+      "desc": "台式国语",
+      "locale": "zh-TW",
+      "file": "assets/audio/samples/zh-TW-HsiaoYuNeural.mp3"
+    },
+    {
+      "short": "zh-HK-WanLungNeural",
+      "name": "Microsoft WanLung Online (Natural) - Chinese (Hong Kong SAR)",
+      "gender": "男",
+      "tag": "粤语",
+      "desc": "粤语讲解",
+      "locale": "zh-HK",
+      "file": "assets/audio/samples/zh-HK-WanLungNeural.mp3"
+    },
+    {
+      "short": "zh-HK-HiuGaaiNeural",
+      "name": "Microsoft HiuGaai Online (Natural) - Chinese (Cantonese Traditional)",
+      "gender": "女",
+      "tag": "粤语",
+      "desc": "粤语讲解",
+      "locale": "zh-HK",
+      "file": "assets/audio/samples/zh-HK-HiuGaaiNeural.mp3"
+    },
+    {
+      "short": "zh-HK-HiuMaanNeural",
+      "name": "Microsoft HiuMaan Online (Natural) - Chinese (Hong Kong SAR)",
+      "gender": "女",
+      "tag": "粤语",
+      "desc": "粤语讲解",
+      "locale": "zh-HK",
+      "file": "assets/audio/samples/zh-HK-HiuMaanNeural.mp3"
+    }
+  ]
+}

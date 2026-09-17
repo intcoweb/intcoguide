@@ -1,0 +1,9 @@
+rm _mem.js
+rm mem.log
+rm probe_lines.js
+rm probe.txt
+rm apply.log
+rm apply2.log
+rm verify.log
+
+剩余临时文件: cleanup.log, server.err.log, server.out.log, _cleanup.js, _dump_guides.cjs

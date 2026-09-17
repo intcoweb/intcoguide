@@ -1,0 +1,4 @@
+RENAME 3D卡通动画风格插画_现代化企业厂区内办公楼外观_四到五层的_2026-09-17T05-58-34.png -> office-illus.png
+nitrile-entrance.png: 1536x1024 -> 1536x914 1871KB
+pvc-entrance.png: 1536x1024 -> 1536x914 1881KB
+office-illus.png: 1536x1024 -> 1536x914 1897KB

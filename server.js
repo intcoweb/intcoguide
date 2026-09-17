@@ -16,8 +16,10 @@ const MIME = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
+  '.mp3': 'audio/mpeg',
   '.ico': 'image/x-icon',
 };
 

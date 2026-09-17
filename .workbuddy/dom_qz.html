@@ -1,0 +1,899 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0b2a45">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>geo-stub 36.8,118.384</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&amp;family=Noto+Sans+SC:wght@400;500;700;900&amp;display=swap">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css?v=20260917-21">
+  <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+
+  <style>#app{position:fixed;left:0;top:0;width:390px!important;max-width:390px!important;height:844px!important}</style>
+  <script>
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var lat = parseFloat(q.get('lat'));
+    var lng = parseFloat(q.get('lng'));
+    if (!isFinite(lat) || !isFinite(lng)) return;
+    var fake = {
+      coords: { latitude: lat, longitude: lng, accuracy: 20, altitude: null, altitudeAccuracy: null, heading: null, speed: null },
+      timestamp: Date.now()
+    };
+    var geo = {
+      getCurrentPosition: function (ok) { setTimeout(function () { ok(fake); }, 60); },
+      watchPosition: function (cb) { setTimeout(function () { cb(fake); }, 120); return 1; },
+      clearWatch: function () {}
+    };
+    // navigator.geolocation 鏄彧璇昏闂櫒锛岀洿鎺ヨ祴鍊间細闈欓粯澶辫触 鈥斺€?蹇呴』 defineProperty
+    try {
+      Object.defineProperty(navigator, 'geolocation', { value: geo, configurable: true, writable: true });
+    } catch (e) {
+      try { navigator.geolocation = geo; } catch (e2) {}
+    }
+    document.title = 'geo-stub ' + lat + ',' + lng;
+  })();
+  </script>
+<style>.vc-switch {
+  display: block;
+  position: fixed;
+  right: 0.76923077em;
+  bottom: 0.76923077em;
+  color: #FFF;
+  background-color: var(--VC-BRAND);
+  line-height: 1;
+  font-size: 1.07692308em;
+  padding: 0.61538462em 1.23076923em;
+  z-index: 10000;
+  border-radius: 0.30769231em;
+  box-shadow: 0 0 0.61538462em rgba(0, 0, 0, 0.4);
+}
+</style><style>#__vconsole {
+  --VC-BG-0: #ededed;
+  --VC-BG-1: #f7f7f7;
+  --VC-BG-2: #fff;
+  --VC-BG-3: #f7f7f7;
+  --VC-BG-4: #4c4c4c;
+  --VC-BG-5: #fff;
+  --VC-BG-6: rgba(0, 0, 0, 0.1);
+  --VC-FG-0: rgba(0, 0, 0, 0.9);
+  --VC-FG-HALF: rgba(0, 0, 0, 0.9);
+  --VC-FG-1: rgba(0, 0, 0, 0.5);
+  --VC-FG-2: rgba(0, 0, 0, 0.3);
+  --VC-FG-3: rgba(0, 0, 0, 0.1);
+  --VC-RED: #fa5151;
+  --VC-ORANGE: #fa9d3b;
+  --VC-YELLOW: #ffc300;
+  --VC-GREEN: #91d300;
+  --VC-LIGHTGREEN: #95ec69;
+  --VC-BRAND: #07c160;
+  --VC-BLUE: #10aeff;
+  --VC-INDIGO: #1485ee;
+  --VC-PURPLE: #6467f0;
+  --VC-LINK: #576b95;
+  --VC-TEXTGREEN: #06ae56;
+  --VC-FG: black;
+  --VC-BG: white;
+  --VC-BG-COLOR-ACTIVE: #ececec;
+  --VC-WARN-BG: #fff3cc;
+  --VC-WARN-BORDER: #ffe799;
+  --VC-ERROR-BG: #fedcdc;
+  --VC-ERROR-BORDER: #fdb9b9;
+  --VC-DOM-TAG-NAME-COLOR: #881280;
+  --VC-DOM-ATTRIBUTE-NAME-COLOR: #994500;
+  --VC-DOM-ATTRIBUTE-VALUE-COLOR: #1a1aa6;
+  --VC-CODE-KEY-FG: #881391;
+  --VC-CODE-PRIVATE-KEY-FG: #cfa1d3;
+  --VC-CODE-FUNC-FG: #0d22aa;
+  --VC-CODE-NUMBER-FG: #1c00cf;
+  --VC-CODE-STR-FG: #c41a16;
+  --VC-CODE-NULL-FG: #808080;
+  color: var(--VC-FG-0);
+  font-size: 13px;
+  font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+  -webkit-user-select: auto;
+  /* global */
+}
+#__vconsole .vc-max-height {
+  max-height: 19.23076923em;
+}
+#__vconsole .vc-max-height-line {
+  max-height: 6.30769231em;
+}
+#__vconsole .vc-min-height {
+  min-height: 3.07692308em;
+}
+#__vconsole dd,
+#__vconsole dl,
+#__vconsole pre {
+  margin: 0;
+}
+#__vconsole pre {
+  white-space: pre-wrap;
+}
+#__vconsole i {
+  font-style: normal;
+}
+.vc-table {
+  height: 100%;
+}
+.vc-table .vc-table-row {
+  line-height: 1.5;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: row;
+  -moz-box-orient: horizontal;
+  -moz-box-direction: normal;
+  -ms-flex-direction: row;
+  flex-direction: row;
+  -webkit-flex-wrap: wrap;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+  overflow: hidden;
+  border-bottom: 1px solid var(--VC-FG-3);
+}
+.vc-table .vc-table-row.vc-left-border {
+  border-left: 1px solid var(--VC-FG-3);
+}
+.vc-table .vc-table-row-icon {
+  margin-left: 4px;
+}
+.vc-table .vc-table-col {
+  -webkit-box-flex: 1;
+  -webkit-flex: 1;
+  -moz-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+  padding: 0.23076923em 0.30769231em;
+  border-left: 1px solid var(--VC-FG-3);
+  overflow: auto;
+}
+.vc-table .vc-table-col:first-child {
+  border: none;
+}
+.vc-table .vc-table-col-value {
+  white-space: pre-wrap;
+  word-break: break-word;
+  /*white-space: nowrap;
+    text-overflow: ellipsis;*/
+  -webkit-overflow-scrolling: touch;
+}
+.vc-table .vc-small .vc-table-col {
+  padding: 0 0.30769231em;
+  font-size: 0.92307692em;
+}
+.vc-table .vc-table-col-2 {
+  -webkit-box-flex: 2;
+  -webkit-flex: 2;
+  -moz-box-flex: 2;
+  -ms-flex: 2;
+  flex: 2;
+}
+.vc-table .vc-table-col-3 {
+  -webkit-box-flex: 3;
+  -webkit-flex: 3;
+  -moz-box-flex: 3;
+  -ms-flex: 3;
+  flex: 3;
+}
+.vc-table .vc-table-col-4 {
+  -webkit-box-flex: 4;
+  -webkit-flex: 4;
+  -moz-box-flex: 4;
+  -ms-flex: 4;
+  flex: 4;
+}
+.vc-table .vc-table-col-5 {
+  -webkit-box-flex: 5;
+  -webkit-flex: 5;
+  -moz-box-flex: 5;
+  -ms-flex: 5;
+  flex: 5;
+}
+.vc-table .vc-table-col-6 {
+  -webkit-box-flex: 6;
+  -webkit-flex: 6;
+  -moz-box-flex: 6;
+  -ms-flex: 6;
+  flex: 6;
+}
+.vc-table .vc-table-row-error {
+  border-color: var(--VC-ERROR-BORDER);
+  background-color: var(--VC-ERROR-BG);
+}
+.vc-table .vc-table-row-error .vc-table-col {
+  color: var(--VC-RED);
+  border-color: var(--VC-ERROR-BORDER);
+}
+.vc-table .vc-table-col-title {
+  font-weight: bold;
+}
+.vc-table .vc-table-action {
+  display: flex;
+  justify-content: space-evenly;
+}
+.vc-table .vc-table-action .vc-icon {
+  flex: 1;
+  text-align: center;
+  display: block;
+}
+.vc-table .vc-table-action .vc-icon:hover {
+  background: var(--VC-BG-3);
+}
+.vc-table .vc-table-action .vc-icon:active {
+  background: var(--VC-BG-1);
+}
+.vc-table .vc-table-input {
+  width: 100%;
+  border: none;
+  color: var(--VC-FG-0);
+  background-color: var(--VC-BG-6);
+  height: 3.53846154em;
+}
+.vc-table .vc-table-input:focus {
+  background-color: var(--VC-FG-2);
+}
+@media (prefers-color-scheme: dark) {
+  #__vconsole:not([data-theme="light"]) {
+    --VC-BG-0: #191919;
+    --VC-BG-1: #1f1f1f;
+    --VC-BG-2: #232323;
+    --VC-BG-3: #2f2f2f;
+    --VC-BG-4: #606060;
+    --VC-BG-5: #2c2c2c;
+    --VC-BG-6: rgba(255, 255, 255, 0.2);
+    --VC-FG-0: rgba(255, 255, 255, 0.8);
+    --VC-FG-HALF: rgba(255, 255, 255, 0.6);
+    --VC-FG-1: rgba(255, 255, 255, 0.5);
+    --VC-FG-2: rgba(255, 255, 255, 0.3);
+    --VC-FG-3: rgba(255, 255, 255, 0.05);
+    --VC-RED: #fa5151;
+    --VC-ORANGE: #c87d2f;
+    --VC-YELLOW: #cc9c00;
+    --VC-GREEN: #74a800;
+    --VC-LIGHTGREEN: #28b561;
+    --VC-BRAND: #07c160;
+    --VC-BLUE: #10aeff;
+    --VC-INDIGO: #1196ff;
+    --VC-PURPLE: #8183ff;
+    --VC-LINK: #7d90a9;
+    --VC-TEXTGREEN: #259c5c;
+    --VC-FG: white;
+    --VC-BG: black;
+    --VC-BG-COLOR-ACTIVE: #282828;
+    --VC-WARN-BG: #332700;
+    --VC-WARN-BORDER: #664e00;
+    --VC-ERROR-BG: #321010;
+    --VC-ERROR-BORDER: #642020;
+    --VC-DOM-TAG-NAME-COLOR: #5DB0D7;
+    --VC-DOM-ATTRIBUTE-NAME-COLOR: #9BBBDC;
+    --VC-DOM-ATTRIBUTE-VALUE-COLOR: #f29766;
+    --VC-CODE-KEY-FG: #e36eec;
+    --VC-CODE-PRIVATE-KEY-FG: #f4c5f7;
+    --VC-CODE-FUNC-FG: #556af2;
+    --VC-CODE-NUMBER-FG: #9980ff;
+    --VC-CODE-STR-FG: #e93f3b;
+    --VC-CODE-NULL-FG: #808080;
+  }
+}
+#__vconsole[data-theme="dark"] {
+  --VC-BG-0: #191919;
+  --VC-BG-1: #1f1f1f;
+  --VC-BG-2: #232323;
+  --VC-BG-3: #2f2f2f;
+  --VC-BG-4: #606060;
+  --VC-BG-5: #2c2c2c;
+  --VC-BG-6: rgba(255, 255, 255, 0.2);
+  --VC-FG-0: rgba(255, 255, 255, 0.8);
+  --VC-FG-HALF: rgba(255, 255, 255, 0.6);
+  --VC-FG-1: rgba(255, 255, 255, 0.5);
+  --VC-FG-2: rgba(255, 255, 255, 0.3);
+  --VC-FG-3: rgba(255, 255, 255, 0.05);
+  --VC-RED: #fa5151;
+  --VC-ORANGE: #c87d2f;
+  --VC-YELLOW: #cc9c00;
+  --VC-GREEN: #74a800;
+  --VC-LIGHTGREEN: #28b561;
+  --VC-BRAND: #07c160;
+  --VC-BLUE: #10aeff;
+  --VC-INDIGO: #1196ff;
+  --VC-PURPLE: #8183ff;
+  --VC-LINK: #7d90a9;
+  --VC-TEXTGREEN: #259c5c;
+  --VC-FG: white;
+  --VC-BG: black;
+  --VC-BG-COLOR-ACTIVE: #282828;
+  --VC-WARN-BG: #332700;
+  --VC-WARN-BORDER: #664e00;
+  --VC-ERROR-BG: #321010;
+  --VC-ERROR-BORDER: #642020;
+  --VC-DOM-TAG-NAME-COLOR: #5DB0D7;
+  --VC-DOM-ATTRIBUTE-NAME-COLOR: #9BBBDC;
+  --VC-DOM-ATTRIBUTE-VALUE-COLOR: #f29766;
+  --VC-CODE-KEY-FG: #e36eec;
+  --VC-CODE-PRIVATE-KEY-FG: #f4c5f7;
+  --VC-CODE-FUNC-FG: #556af2;
+  --VC-CODE-NUMBER-FG: #9980ff;
+  --VC-CODE-STR-FG: #e93f3b;
+  --VC-CODE-NULL-FG: #808080;
+}
+.vc-tabbar {
+  border-bottom: 1px solid var(--VC-FG-3);
+  overflow-x: auto;
+  height: 3em;
+  width: auto;
+  white-space: nowrap;
+}
+.vc-tabbar .vc-tab {
+  display: inline-block;
+  line-height: 3em;
+  padding: 0 1.15384615em;
+  border-right: 1px solid var(--VC-FG-3);
+  text-decoration: none;
+  color: var(--VC-FG-0);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+.vc-tabbar .vc-tab:active {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+.vc-tabbar .vc-tab.vc-actived {
+  background-color: var(--VC-BG-1);
+}
+.vc-toolbar {
+  border-top: 1px solid var(--VC-FG-3);
+  line-height: 3em;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: row;
+  -moz-box-orient: horizontal;
+  -moz-box-direction: normal;
+  -ms-flex-direction: row;
+  flex-direction: row;
+}
+.vc-toolbar .vc-tool {
+  display: none;
+  font-style: normal;
+  text-decoration: none;
+  color: var(--VC-FG-0);
+  width: 50%;
+  -webkit-box-flex: 1;
+  -webkit-flex: 1;
+  -moz-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+  text-align: center;
+  position: relative;
+  -webkit-touch-callout: none;
+}
+.vc-toolbar .vc-tool.vc-toggle,
+.vc-toolbar .vc-tool.vc-global-tool {
+  display: block;
+}
+.vc-toolbar .vc-tool:active {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+.vc-toolbar .vc-tool:after {
+  content: " ";
+  position: absolute;
+  top: 0.53846154em;
+  bottom: 0.53846154em;
+  right: 0;
+  border-left: 1px solid var(--VC-FG-3);
+}
+.vc-toolbar .vc-tool-last:after {
+  border: none;
+}
+.vc-topbar {
+  background-color: var(--VC-BG-1);
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: row;
+  -moz-box-orient: horizontal;
+  -moz-box-direction: normal;
+  -ms-flex-direction: row;
+  flex-direction: row;
+  -webkit-flex-wrap: wrap;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.vc-topbar .vc-toptab {
+  display: none;
+  -webkit-box-flex: 1;
+  -webkit-flex: 1;
+  -moz-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+  line-height: 2.30769231em;
+  padding: 0 1.15384615em;
+  border-bottom: 1px solid var(--VC-FG-3);
+  text-decoration: none;
+  text-align: center;
+  color: var(--VC-FG-0);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+.vc-topbar .vc-toptab.vc-toggle {
+  display: block;
+}
+.vc-topbar .vc-toptab:active {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+.vc-topbar .vc-toptab.vc-actived {
+  border-bottom: 1px solid var(--VC-INDIGO);
+}
+.vc-mask {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0);
+  z-index: 10001;
+  -webkit-transition: background 0.3s;
+  transition: background 0.3s;
+  -webkit-tap-highlight-color: transparent;
+  overflow-y: scroll;
+}
+.vc-panel {
+  display: none;
+  position: fixed;
+  min-height: 85%;
+  left: 0;
+  right: 0;
+  bottom: -100%;
+  z-index: 10002;
+  background-color: var(--VC-BG-0);
+  transition: bottom 0.3s;
+}
+.vc-toggle .vc-switch {
+  display: none;
+}
+.vc-toggle .vc-mask {
+  background: rgba(0, 0, 0, 0.6);
+  display: block;
+}
+.vc-toggle .vc-panel {
+  bottom: 0;
+}
+.vc-content {
+  background-color: var(--VC-BG-2);
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: absolute;
+  top: 3.07692308em;
+  left: 0;
+  right: 0;
+  bottom: 3.07692308em;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: constant(safe-area-inset-bottom);
+  margin-bottom: env(safe-area-inset-bottom);
+}
+.vc-content.vc-has-topbar {
+  top: 5.46153846em;
+}
+.vc-plugin-box {
+  display: none;
+  position: relative;
+  min-height: 100%;
+}
+.vc-plugin-box.vc-fixed-height {
+  height: 100%;
+}
+.vc-plugin-box.vc-actived {
+  display: block;
+}
+.vc-plugin-content {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  flex-direction: column;
+  -webkit-tap-highlight-color: transparent;
+}
+.vc-plugin-content:empty:before {
+  content: "Empty";
+  color: var(--VC-FG-1);
+  position: absolute;
+  top: 45%;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  font-size: 1.15384615em;
+  text-align: center;
+}
+.vc-plugin-empty {
+  color: var(--VC-FG-1);
+  font-size: 1.15384615em;
+  height: 100%;
+  width: 100%;
+  padding: 1.15384615em 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+@supports (bottom: constant(safe-area-inset-bottom)) or (bottom: env(safe-area-inset-bottom)) {
+  .vc-toolbar,
+  .vc-switch {
+    bottom: constant(safe-area-inset-bottom);
+    bottom: env(safe-area-inset-bottom);
+  }
+}
+</style><style>.vc-scroller-viewport {
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+.vc-scroller-contents {
+  min-height: 100%;
+  will-change: transform;
+}
+.vc-scroller-items {
+  will-change: height;
+  position: relative;
+}
+.vc-scroller-item {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.vc-scroller-viewport.static .vc-scroller-item {
+  display: block;
+  position: static;
+}
+.vc-scroller-scrollbar-track {
+  width: 4px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1px;
+}
+.vc-scroller-scrollbar-thumb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 999px;
+}
+</style><style></style><style>.vc-cmd {
+  height: 3.07692308em;
+  border-top: 1px solid var(--VC-FG-3);
+  display: flex;
+  flex-direction: row;
+}
+.vc-cmd.vc-filter {
+  bottom: 0;
+}
+.vc-cmd-input-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  height: 2.15384615em;
+  padding: 0.46153846em 0.61538462em;
+}
+.vc-cmd-input {
+  width: 100%;
+  border: none;
+  resize: none;
+  outline: none;
+  padding: 0;
+  font-size: 0.92307692em;
+  background-color: transparent;
+  color: var(--VC-FG-0);
+}
+.vc-cmd-input::-webkit-input-placeholder {
+  line-height: 2.15384615em;
+}
+.vc-cmd-btn {
+  width: 3.07692308em;
+  border: none;
+  background-color: var(--VC-BG-0);
+  color: var(--VC-FG-0);
+  outline: none;
+  -webkit-touch-callout: none;
+  font-size: 1em;
+}
+.vc-cmd-clear-btn {
+  flex: 1 3.07692308em;
+  text-align: center;
+  line-height: 3.07692308em;
+}
+.vc-cmd-btn:active,
+.vc-cmd-clear-btn:active {
+  background-color: var(--VC-BG-COLOR-ACTIVE);
+}
+.vc-cmd-prompted {
+  position: absolute;
+  left: 0.46153846em;
+  right: 0.46153846em;
+  background-color: var(--VC-BG-3);
+  border: 1px solid var(--VC-FG-3);
+  overflow-x: scroll;
+  display: none;
+}
+.vc-cmd-prompted li {
+  list-style: none;
+  line-height: 30px;
+  padding: 0 0.46153846em;
+  border-bottom: 1px solid var(--VC-FG-3);
+}
+.vc-cmd-prompted li:active {
+  background-color: var(--VC-BG-COLOR-ACTIVE);
+}
+.vc-cmd-prompted-hide {
+  text-align: center;
+}
+</style><style>.vc-group .vc-group-preview {
+  -webkit-touch-callout: none;
+}
+.vc-group .vc-group-preview:active {
+  background-color: var(--VC-BG-COLOR-ACTIVE);
+}
+.vc-group .vc-group-detail {
+  display: none;
+  padding: 0 0 0.76923077em 1.53846154em;
+  border-bottom: 1px solid var(--VC-FG-3);
+}
+.vc-group.vc-actived .vc-group-detail {
+  display: block;
+  background-color: var(--VC-BG-1);
+}
+.vc-group.vc-actived .vc-table-row {
+  background-color: var(--VC-BG-2);
+}
+.vc-group.vc-actived .vc-group-preview {
+  background-color: var(--VC-BG-1);
+}
+</style><style>/* color */
+.vcelm-node {
+  color: var(--VC-DOM-TAG-NAME-COLOR);
+}
+.vcelm-k {
+  color: var(--VC-DOM-ATTRIBUTE-NAME-COLOR);
+}
+.vcelm-v {
+  color: var(--VC-DOM-ATTRIBUTE-VALUE-COLOR);
+}
+.vcelm-l.vc-actived > .vcelm-node {
+  background-color: var(--VC-FG-3);
+}
+/* layout */
+.vcelm-l {
+  padding-left: 8px;
+  position: relative;
+  word-wrap: break-word;
+  line-height: 1.2;
+}
+/*.vcelm-l.vcelm-noc {
+  padding-left: 0;
+}*/
+.vcelm-l .vcelm-node:active {
+  background-color: var(--VC-BG-COLOR-ACTIVE);
+}
+.vcelm-l.vcelm-noc .vcelm-node:active {
+  background-color: transparent;
+}
+.vcelm-t {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+/* level */
+/* arrow */
+.vcelm-l:before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 6px;
+  left: 3px;
+  width: 0;
+  height: 0;
+  border: transparent solid 3px;
+  border-left-color: var(--VC-FG-1);
+}
+.vcelm-l.vc-toggle:before {
+  display: block;
+  top: 6px;
+  left: 0;
+  border-top-color: var(--VC-FG-1);
+  border-left-color: transparent;
+}
+.vcelm-l.vcelm-noc:before {
+  display: none;
+}
+</style></head>
+<body>
+  <div id="app">
+    <!-- ======================= 鍦板浘 Tab ======================= -->
+    <section class="page page-map active orient-hint-on" id="page-map">
+      <!-- 褰撳墠鍩哄湴鍚嶏細鐐瑰紑鍙垏鎹㈠熀鍦?-->
+      <div class="map-base-bar" id="mapCampusWrap" style="display: flex;">
+        <button class="map-base-btn" id="mapCampusBtn" type="button" aria-label="鍒囨崲鍩哄湴">鑻辩鍖荤枟闈掑窞鍩哄湴</button>
+      </div>
+
+      <div class="map-search-entry">
+        <input class="map-search-input" id="mapSearchInput" placeholder="鎼滅储鍦扮偣" autocomplete="off">
+        <button class="map-search-btn" id="mapSearchBtn" type="button">鎼滅储</button>
+      </div>
+
+      <!-- 鍒嗙被鏍忥紙鏃犺矾绾挎椂锛?-->
+      <div class="map-control" id="mapControl" style="display: block;">
+        <div class="map-categories" id="mapCategories"><div class="map-cat choose" data-i="0">鍏ㄩ儴</div><div class="map-cat" data-i="1">鐢熶骇杞﹂棿</div><div class="map-cat" data-i="2">鐜繚浠撳偍</div><div class="map-cat" data-i="3">鐢熸椿閰嶅</div></div>
+      </div>
+
+      <!-- 鍑鸿鏂瑰紡锛堟湁璺嚎鏃讹級 -->
+      <div class="map-modes" id="mapModes">
+        <div class="mode" data-mode="walking">姝ヨ</div>
+        <div class="mode" data-mode="bicycling">楠戣</div>
+        <div class="mode" data-mode="driving">椹捐溅</div>
+      </div>
+
+      <!-- 鍦板浘瀹瑰櫒 -->
+      <div id="leafletMap" class="leaflet-container leaflet-touch leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom" tabindex="0"><div class="leaflet-pane leaflet-map-pane" style="transform: translate3d(0px, 0px, 0px);"><div class="leaflet-pane leaflet-tile-pane"><div class="leaflet-layer " style="z-index: 1; opacity: 1;"><div class="leaflet-tile-container leaflet-zoom-animated" style="z-index: 20; transform: translate3d(0px, 0px, 0px) scale(1);"><img alt="" src="https://rt2.map.gtimg.com/tile?z=15&amp;x=27008&amp;y=19665&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(90px, 33px, 0px); opacity: 0.055;"><img alt="" src="https://rt3.map.gtimg.com/tile?z=15&amp;x=27008&amp;y=19664&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(90px, 289px, 0px); opacity: 0.06;"><img alt="" src="https://rt1.map.gtimg.com/tile?z=15&amp;x=27007&amp;y=19665&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-166px, 33px, 0px); opacity: 0.065;"><img alt="" src="https://rt3.map.gtimg.com/tile?z=15&amp;x=27009&amp;y=19665&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(346px, 33px, 0px); opacity: 0.06;"><img alt="" src="https://rt2.map.gtimg.com/tile?z=15&amp;x=27007&amp;y=19664&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-166px, 289px, 0px); opacity: 0.015;"><img alt="" src="https://rt0.map.gtimg.com/tile?z=15&amp;x=27009&amp;y=19664&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(346px, 289px, 0px); opacity: 0.175;"><img alt="" src="https://rt1.map.gtimg.com/tile?z=15&amp;x=27008&amp;y=19666&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(90px, -223px, 0px); opacity: 0.06;"><img alt="" src="https://rt0.map.gtimg.com/tile?z=15&amp;x=27008&amp;y=19663&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(90px, 545px, 0px); opacity: 0.165;"><img alt="" src="https://rt0.map.gtimg.com/tile?z=15&amp;x=27007&amp;y=19666&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-166px, -223px, 0px); opacity: 0.165;"><img alt="" src="https://rt2.map.gtimg.com/tile?z=15&amp;x=27009&amp;y=19666&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(346px, -223px, 0px); opacity: 0.055;"><img alt="" src="https://rt3.map.gtimg.com/tile?z=15&amp;x=27007&amp;y=19663&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-166px, 545px, 0px); opacity: 0.06;"><img alt="" src="https://rt1.map.gtimg.com/tile?z=15&amp;x=27009&amp;y=19663&amp;type=vector&amp;styleid=0" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(346px, 545px, 0px); opacity: 0.06;"></div></div></div><div class="leaflet-pane leaflet-overlay-pane"><img class="leaflet-image-layer leaflet-zoom-animated campus-map-overlay" src="assets/images/qingzhou-intco-old-map.png?v=20260911-1" alt="" style="z-index: 1; transform: translate3d(38811px, -82243px, 0px); width: 179px; height: 282px;"><svg pointer-events="none" class="leaflet-zoom-animated" width="468" height="946" viewBox="-39 -79 468 946" style="transform: translate3d(-39px, -79px, 0px);"><g><path stroke="#ef4444" stroke-opacity="0.9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path><path stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="1" fill-rule="evenodd" d="M0 0"></path></g></svg></div><div class="leaflet-pane leaflet-shadow-pane"></div><div class="leaflet-pane leaflet-marker-pane"><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38899px, -82195px, 0px); z-index: -82195;"><span style="transform: rotate(83.70744540798029deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38884px, -82186px, 0px); z-index: -82186;"><span style="transform: rotate(-187.1155197596981deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38867px, -82161px, 0px); z-index: -82161;"><span style="transform: rotate(-268.65467592557354deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38895px, -82139px, 0px); z-index: -82139;"><span style="transform: rotate(0.7959453829976013deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38923px, -82124px, 0px); z-index: -82124;"><span style="transform: rotate(-269.9521878266104deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38900px, -82110px, 0px); z-index: -82110;"><span style="transform: rotate(-180.5062011584716deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38876px, -82111px, 0px); z-index: -82111;"><span style="transform: rotate(-108.32622830680398deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38869px, -82113px, 0px); z-index: -82113;"><span style="transform: rotate(-180.98639825864433deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38864px, -82125px, 0px); z-index: -82125;"><span style="transform: rotate(-80.91807530953771deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38866px, -82160px, 0px); z-index: -82160;"><span style="transform: rotate(-89.37816763811331deg)">鉃?/span></div><div class="leaflet-marker-icon map-route-arrow-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -9px; margin-top: -9px; width: 18px; height: 18px; transform: translate3d(38883px, -82185px, 0px); z-index: -82185;"><span style="transform: rotate(-7.771727068674039deg)">鉃?/span></div><div class="leaflet-marker-icon map-user-marker-icon leaflet-zoom-animated" tabindex="0" role="button" style="margin-left: -19px; margin-top: -19px; width: 38px; height: 38px; transform: translate3d(39032px, -83169px, 0px); z-index: -82669;"><div class="user-heading"></div><div class="user-dot"></div></div></div><div class="leaflet-pane leaflet-tooltip-pane"></div><div class="leaflet-pane leaflet-popup-pane"></div><div class="leaflet-proxy leaflet-zoom-animated" style="transform: translate3d(6.91415e+06px, 3.35447e+06px, 0px) scale(16384);"></div><div class="leaflet-pane leaflet-points-pane" style="z-index: 500;"></div></div><div class="leaflet-control-container"><div class="leaflet-top leaflet-left"></div><div class="leaflet-top leaflet-right"></div><div class="leaflet-bottom leaflet-left"></div><div class="leaflet-bottom leaflet-right"><div class="leaflet-control-attribution leaflet-control"><a href="https://leafletjs.com" title="A JavaScript library for interactive maps"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8" class="leaflet-attribution-flag"><path fill="#4C7BE1" d="M0 0h12v4H0z"></path><path fill="#FFD500" d="M0 4h12v3H0z"></path><path fill="#E0BC00" d="M0 7h12v1H0z"></path></svg> Leaflet</a> <span aria-hidden="true">|</span> 漏 鑵捐鍦板浘</div></div></div></div>
+
+      <!-- 鍦板浘鍙充晶鎸夐挳 -->
+      <div class="map-right-tools">
+        <div class="location hidden" id="mapRestoreBtn" title="杩樺師">
+          <img src="assets/images/restore.png" alt="杩樺師">
+        </div>
+        <div class="location" id="mapLocationBtn" title="瀹氫綅">
+          <img src="assets/images/location.png" alt="瀹氫綅">
+        </div>
+        <button class="location orientation-permission" id="mapOrientationBtn" title="鏈濆悜鏉冮檺鐢宠" type="button" aria-label="鏈濆悜鏉冮檺鐢宠">
+          <svg class="orientation-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+            <path d="M16.1 7.9 13.3 13.3 7.9 16.1 10.7 10.7z" fill="currentColor"></path>
+            <path d="M7.9 16.1 10.7 10.7 13.3 13.3z" fill="currentColor" opacity=".38"></path>
+          </svg>
+        </button>
+        <button class="map-layer-toggle" id="mapLayerToggle" title="鍒囨崲鍘傚尯绀烘剰鍥?鐪熷疄鍦板浘"><span class="lt-line">鐪熷疄</span><span class="lt-line">鍦板浘</span></button>
+      </div>
+
+      <!-- 搴曢儴鎸夐挳 -->
+      <div class="map-bottom hidden" id="mapBottomBtn"></div>
+
+      <!-- iOS 鏂瑰悜鏉冮檺寮曞锛歩OS 瑕佹眰銆岄〉闈㈠唴鐨勪竴娆℃墜鍔裤€嶆墠鑳界敵璇疯澶囨湞鍚戯紝
+           棣栨杩涘叆鏃剁粰涓€涓樉鐪煎叆鍙ｏ紝鐢ㄦ埛涓嶅繀鍘绘壘鍙充晶鐨勫皬鎸夐挳 -->
+      <button class="map-orient-hint on" id="mapOrientHint" type="button">
+        <svg class="map-orient-hint-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
+          <path d="M16 8 13.4 13.4 8 16 10.6 10.6z" fill="currentColor"></path>
+        </svg>
+        <span class="map-orient-hint-text">杞昏Е灞忓箷锛屽紑鍚柟鍚戞寚寮?/span>
+        <span class="map-orient-hint-go">寮€鍚?/span>
+      </button>
+    </section>
+
+    <!-- ======================= 鍩哄湴浠嬬粛 Tab ======================= -->
+    <section class="page page-site" id="page-site">
+      <!-- 鍘傚尯 Hero锛氬師銆岄椤点€嶉《閮ㄥ尯鍧楋紝鐜扮疆浜庡熀鍦颁粙缁嶉〉鏈€涓婃柟 -->
+      <div class="home-hero">
+        <div class="hero-bg"></div>
+        <span class="hero-orb orb-a"></span>
+        <span class="hero-orb orb-b"></span>
+        <span class="hero-orb orb-c"></span>
+        <div class="hero-shine"></div>
+        <div class="hero-top">
+          <span class="hero-eyebrow"><i></i>INTCO MEDICAL 路 鏅烘収鍥尯</span>
+          <div class="hero-campus" id="siteCampusWrap">
+            <button class="picker" id="siteCampusBtn" type="button"></button>
+          </div>
+        </div>
+        <h1 class="home-school-name" id="heroSchoolName"></h1>
+        <div class="home-english" id="heroEnglish"></div>
+        <div class="hero-tags" id="heroTags"></div>
+        <div class="hero-quote" id="heroMotto"></div>
+      </div>
+
+      <div class="site-body">
+        <div class="site-left" id="siteLeft"></div>
+        <div class="site-right">
+          <div class="site-title">
+            <img id="siteTitleIcon" src="assets/images/tag.png" alt="">
+            <span class="site-title-name" id="siteTitleText"></span>
+            <span class="site-title-count" id="siteTitleCount"></span>
+          </div>
+          <div class="site-content" id="siteContent"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 瀛愰〉闈紙瑕嗙洊灞傦級 ======================= -->
+    <section class="subpage" id="page-search">
+      <div class="sub-nav">
+        <button class="back" data-back="">鈥?/button>
+        <span class="sub-title">鎼滅储鍦扮偣</span>
+      </div>
+      <div class="search-root" id="searchRoot"></div>
+      <div class="search-history" id="searchHistory"></div>
+      <div class="search-result" id="searchResult"></div>
+    </section>
+
+    <section class="subpage" id="page-instruction">
+      <div class="sub-nav">
+        <button class="back" data-back="">鈥?/button>
+        <span class="sub-title">浣跨敤璇存槑</span>
+      </div>
+      <div class="instruction-body" id="instructionBody"></div>
+    </section>
+
+    <section class="subpage" id="page-introduction">
+      <div class="sub-nav">
+        <button class="back" data-back="">鈥?/button>
+        <span class="sub-title">鍘傚尯绠€浠?/span>
+      </div>
+      <div class="introduction-body" id="introductionBody"></div>
+    </section>
+
+    <section class="subpage" id="page-pano">
+      <div class="sub-nav">
+        <button class="back" data-back="">鈥?/button>
+        <span class="sub-title">鍏ㄦ櫙鍦板浘</span>
+      </div>
+      <div class="pano-body" id="panoBody"></div>
+    </section>
+
+    <!-- 搴曢儴 TabBar -->
+    <nav class="tabbar" id="tabbar">
+      <a class="tab-item active" data-route="#/map">
+        <img class="tab-icon" src="assets/images/tabbar/icon_map_HL.png" data-alt="assets/images/tabbar/icon_map_HL.png" alt="鍦板浘璁茶В"><span>鍦板浘璁茶В</span>
+      </a>
+      <!-- 銆岄潚宸炲湴鍥俱€峵ab 宸茬Щ闄わ細鍩哄湴鍒囨崲鏀圭敱鍦板浘椤甸《閮ㄨ兌鍥?/ 鍩哄湴浠嬬粛椤靛彸涓婅鎵挎媴 -->
+      <a class="tab-item" data-route="#/site">
+        <img class="tab-icon" src="http://127.0.0.1:8000/assets/images/tabbar/icon_collection.png" data-alt="assets/images/tabbar/icon_collection_HL.png" alt="鍩哄湴浠嬬粛"><span>鍩哄湴浠嬬粛</span>
+      </a>
+    </nav>
+
+    <!-- 寮圭獥 -->
+    <div class="modal-mask" id="modalMask">
+      <div class="modal" id="modalBox">
+        <div class="modal-header">
+          <span id="modalTitle"></span>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer" id="modalFooter"></div>
+      </div>
+    </div>
+
+    <!-- 杞绘彁绀?toast -->
+    <div class="toast" id="toast">宸插畾浣嶅埌褰撳墠浣嶇疆</div>
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="js/data.js?v=20260917-05"></script>
+    <script src="assets/audio/guides/manifest.js?v=20260916-1"></script>
+    <script src="js/app.js?v=20260917-28"></script>
+
+
+</body><div id="__vconsole" style="" data-theme="dark"><div class="vc-switch" style="right: 0px; bottom: 20px; display: block;">vConsole</div> <div class="vc-mask" style="display: none;"></div> <div class="vc-panel" style="display: none;"><div class="vc-tabbar"><a class="vc-tab vc-actived" id="__vc_tab_default">Log</a><a class="vc-tab" id="__vc_tab_system">System</a><a class="vc-tab" id="__vc_tab_network">Network</a><a class="vc-tab" id="__vc_tab_element">Element</a><a class="vc-tab" id="__vc_tab_storage">Storage</a></div> <div class="vc-topbar"><i class="vc-toptab vc-topbar-default vc-actived vc-toggle">All</i><i class="vc-toptab vc-topbar-default vc-toggle">Log</i><i class="vc-toptab vc-topbar-default vc-toggle">Info</i><i class="vc-toptab vc-topbar-default vc-toggle">Warn</i><i class="vc-toptab vc-topbar-default vc-toggle">Error</i><i class="vc-toptab vc-topbar-system vc-actived">All</i><i class="vc-toptab vc-topbar-system">Log</i><i class="vc-toptab vc-topbar-system">Info</i><i class="vc-toptab vc-topbar-system">Warn</i><i class="vc-toptab vc-topbar-system">Error</i><i class="vc-toptab vc-topbar-storage vc-actived">Cookies</i><i class="vc-toptab vc-topbar-storage">LocalStorage</i><i class="vc-toptab vc-topbar-storage">SessionStorage</i></div> <div class="vc-content vc-has-topbar"><div id="__vc_plug_default" class="vc-plugin-box vc-fixed-height vc-actived"><div class="vc-plugin-content vc-logs-has-cmd"><div class="vc-scroller-viewport"><div class="vc-scroller-contents" style="transform: translateY(-360px) translateZ(0px);"> <div class="vc-scroller-items" style="height: 360px;"></div> <div class="vc-scroller-footer"><form class="vc-cmd"><ul class="vc-cmd-prompted" style=""> <li>No Prompted</li></ul> <div class="vc-cmd-input-wrap"><textarea class="vc-cmd-input" placeholder="command..."></textarea> </div> <button class="vc-cmd-btn" type="submit">OK</button></form> <form class="vc-cmd vc-filter"><ul class="vc-cmd-prompted"></ul> <div class="vc-cmd-input-wrap"><textarea class="vc-cmd-input" placeholder="filter..."></textarea> </div> <button class="vc-cmd-btn" type="submit">Filter</button></form></div></div> <div class="vc-scroller-scrollbar-track" style="display: block;"><div class="vc-scroller-scrollbar-thumb" style="height: 0%; top: 100%;"></div></div></div></div></div><div id="__vc_plug_system" class="vc-plugin-box vc-fixed-height"><div class="vc-plugin-content"><div class="vc-scroller-viewport"><div class="vc-scroller-contents" style="transform: translateY(-270px) translateZ(0px);"> <div class="vc-scroller-items" style="height: 270px;"></div> <div class="vc-scroller-footer"></div></div> <div class="vc-scroller-scrollbar-track" style="display: block;"><div class="vc-scroller-scrollbar-thumb" style="height: 0%; top: 100%;"></div></div></div></div></div><div id="__vc_plug_network" class="vc-plugin-box vc-fixed-height"><div class="vc-table"><div class="vc-plugin-content"><div class="vc-scroller-viewport"><div class="vc-scroller-contents" style="transform: translateY(0px) translateZ(0px);"><div class="vc-scroller-header"><dl class="vc-table-row"><dd class="vc-table-col vc-table-col-4">Name </dd><dd class="vc-table-col">Method</dd><dd class="vc-table-col">Status</dd><dd class="vc-table-col">Time</dd></dl></div> <div class="vc-scroller-items" style="height: 0px;"><div slot="empty" class="vc-plugin-empty">Empty</div></div> </div> <div class="vc-scroller-scrollbar-track" style="display: none;"><div class="vc-scroller-scrollbar-thumb" style="height: 100%; top: 0%;"></div></div></div></div></div></div><div id="__vc_plug_element" class="vc-plugin-box"><div class="vc-plugin-content"></div></div><div id="__vc_plug_storage" class="vc-plugin-box"><div class="vc-table"><div class="vc-table-row"><div class="vc-table-col">Key</div> 
+    <div class="vc-table-col vc-table-col-2">Value</div> 
+    <div class="vc-table-col vc-table-col-1 vc-table-action"></div></div> <div class="vc-plugin-empty">Empty</div></div></div></div> <div class="vc-toolbar"><i class="vc-tool vc-tool-default vc-toggle">Clear</i><i class="vc-tool vc-tool-default vc-toggle">Top</i><i class="vc-tool vc-tool-default vc-toggle">Bottom</i><i class="vc-tool vc-tool-system">Clear</i><i class="vc-tool vc-tool-system">Top</i><i class="vc-tool vc-tool-system">Bottom</i><i class="vc-tool vc-tool-network">Clear</i><i class="vc-tool vc-tool-element">Expand</i><i class="vc-tool vc-tool-element">Collapse</i><i class="vc-tool vc-tool-storage">Add</i><i class="vc-tool vc-tool-storage">Refresh</i><i class="vc-tool vc-tool-storage">Clear</i> <i class="vc-tool vc-global-tool vc-tool-last vc-hide">Hide</i></div></div></div></html>

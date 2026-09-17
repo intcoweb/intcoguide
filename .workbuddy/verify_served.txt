@@ -1,0 +1,16 @@
+index.html 引用 CSS v=20260916-13: True
+index.html 引用 app.js v=20260916-09: True
+css 含 position: relative;                    True
+css 含 .tap-hand {                            True
+css 含 .tap-ripple {                          True
+css 含 border-right-color: currentColor       True
+css 含 @keyframes tapRipple                   True
+css 含 @keyframes tapPress                    True
+css 含 animation-delay: -0.95s                True
+css 含 left: 7.125px                          True
+css 含 top: 2.6px                             True
+css 旧写法已无（label-tap 直接吃 fill）: True
+js 含 label-tap 容器: True
+js 波纹元素数（应为 2）: 2
+js 仍保留 pan_tool_alt path + rotate(90): True
+js 旧 gesture-tap path 残留: False

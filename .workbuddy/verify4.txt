@@ -1,0 +1,3 @@
+﻿showroom.webp -> 200 image/webp
+served data.js has showroom.webp: True
+served data.js still has showroom-illus: False

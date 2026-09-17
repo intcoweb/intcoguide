@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>讲解音色试音台 · 安徽英科医疗导航</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0 14px 60px;
+      font-family: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+      background: #f2f7f8; color: #23454e; -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 20px; margin: 22px 0 6px; color: #17505c; }
+    .sub { font-size: 12.5px; color: #6b8b93; line-height: 1.7; margin: 0 0 16px; }
+    .card {
+      background: #fff; border: 1px solid #e2edee; border-radius: 14px;
+      padding: 14px; margin-bottom: 14px; box-shadow: 0 6px 16px rgba(26, 75, 81, .06);
+    }
+    .card-title {
+      font-size: 13px; font-weight: 700; color: #1f7081;
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .card-title .en { font-size: 10px; font-weight: 600; color: #9ab6bc; letter-spacing: .06em; }
+    textarea {
+      width: 100%; min-height: 78px; resize: vertical;
+      border: 1px solid #d9e8ea; border-radius: 10px; padding: 10px;
+      font-size: 13px; line-height: 1.7; color: #23454e; font-family: inherit; background: #fbfeff;
+    }
+    .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .preset {
+      border: 1px solid #cfe4e6; background: #f4fafb; color: #2b6a76;
+      border-radius: 16px; padding: 5px 11px; font-size: 12px; cursor: pointer;
+    }
+    .preset:active { transform: scale(.96); }
+    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .slider-row label { width: 42px; font-size: 12px; color: #56797f; flex: none; }
+    .slider-row input[type=range] { flex: 1; accent-color: #2a9c8e; }
+    .slider-row .val { width: 40px; text-align: right; font-size: 12px; color: #1f7081; font-weight: 700; }
+    .voice-list { display: flex; flex-direction: column; gap: 8px; }
+    .voice {
+      display: flex; align-items: center; gap: 10px;
+      border: 1px solid #e2edee; border-radius: 12px; padding: 9px 10px; background: #fbfeff;
+    }
+    .voice.playing { border-color: #2a9c8e; background: #edfaf7; }
+    .voice.picked { border-color: #e48762; background: #fff6f1; }
+    .voice-main { flex: 1; min-width: 0; }
+    .voice-name { font-size: 13px; font-weight: 700; color: #1d4b55; }
+    .voice-meta { font-size: 11px; color: #7d999f; margin-top: 3px; line-height: 1.6; }
+    .tag {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 8px; margin-left: 5px; vertical-align: 1px;
+    }
+    .tag.ai { background: linear-gradient(135deg, #2a9c8e, #1f7081); color: #fff; }
+    .tag.natural { background: #2a9c8e; color: #fff; }
+    .tag.local { background: #e6f0f1; color: #4d7a83; }
+    .tag.online { background: #ffe9d6; color: #b4702e; }
+    .tag.gender { background: #eef4f5; color: #5b838b; }
+    .btn { flex: none; border: 0; border-radius: 16px; cursor: pointer; font-size: 12px; font-weight: 700; padding: 7px 12px; }
+    .btn-play { background: linear-gradient(135deg, #2a9c8e, #1f7081); color: #fff; }
+    .btn-play.stop { background: linear-gradient(135deg, #e48762, #c85d5d); }
+    .btn-pick { background: #f0f5f6; color: #3c6a73; border: 1px solid #d9e8ea; }
+    .btn-pick.on { background: linear-gradient(135deg, #e48762, #c85d5d); color: #fff; border: 0; }
+    .btn-long { background: #eef4f5; color: #2b6a76; border: 1px solid #d9e8ea; }
+    .voice-btns { display: flex; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+    .current { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: #2b6a76; }
+    .current code {
+      background: #f1f7f8; border: 1px solid #dfecee; border-radius: 6px;
+      padding: 2px 6px; font-size: 12px; color: #17505c; word-break: break-all;
+    }
+    .link-btn { border: 0; background: none; color: #2a9c8e; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; }
+    .empty { font-size: 12.5px; color: #7d999f; line-height: 1.7; }
+    .note {
+      font-size: 12px; color: #6b8b93; line-height: 1.85;
+      background: #f7fbfb; border: 1px dashed #d9e8ea; border-radius: 10px; padding: 10px 12px;
+    }
+    .note b { color: #2b6a76; }
+    .group-title { font-size: 12px; font-weight: 700; color: #6b8b93; margin: 12px 0 8px; }
+    .badge-ai {
+      font-size: 10px; font-weight: 700; color: #fff; padding: 2px 8px; border-radius: 10px;
+      background: linear-gradient(135deg, #e48762, #c85d5d);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>讲解音色试音台</h1>
+    <p class="sub">
+      上面一组是<b>微软神经语音真人音</b>（已生成好的 MP3，任何手机/浏览器播放都一样，最真实）；
+      下面一组是<b>你这台电脑浏览器自带的音色</b>（实时合成，机械感相对重）。
+      听完后点「选为讲解音色」，告诉我名字，我把全部讲解词按该音色批量生成并切换播放。
+    </p>
+
+    <div class="card">
+      <div class="card-title">
+        AI 真人音色 <span class="badge-ai">推荐</span>
+        <span class="en">NEURAL MP3</span>
+      </div>
+      <div id="aiBox"><div class="empty">正在读取样例音频清单…</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">浏览器自带音色 <span class="en">BROWSER VOICES</span></div>
+      <div id="voiceBox"><div class="empty">正在读取本机音色列表…</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">试听文本（仅对浏览器音色生效） <span class="en">SAMPLE</span></div>
+      <textarea id="sample"></textarea>
+      <div class="presets">
+        <button class="preset" data-preset="exhibition">展厅讲解</button>
+        <button class="preset" data-preset="nbr">丁腈车间讲解</button>
+        <button class="preset" data-preset="pvc">PVC车间讲解</button>
+        <button class="preset" data-preset="short">短句（快速试音）</button>
+      </div>
+      <div class="slider-row">
+        <label>语速</label>
+        <input type="range" id="rate" min="0.6" max="1.4" step="0.02" value="0.92" />
+        <span class="val" id="rateVal">0.92</span>
+      </div>
+      <div class="slider-row">
+        <label>音调</label>
+        <input type="range" id="pitch" min="0.7" max="1.3" step="0.02" value="1" />
+        <span class="val" id="pitchVal">1.00</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">当前已选 <span class="en">CURRENT</span></div>
+      <div class="current" id="currentBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">说明 <span class="en">NOTES</span></div>
+      <div class="note">
+        1. <b>AI 真人音色</b>由微软神经语音（edge-tts）离线生成 MP3：<b>手机、微信内置浏览器、断网都能播</b>，也不会被浏览器 15 秒截断；<br />
+        2. 音调滑块只对浏览器音色有效；MP3 音色的语速用播放器变速试听，正式生成时可整体调快/调慢；<br />
+        3. 方言（东北/陕西/粤语/台湾腔）是<b>趣味选项</b>，正式接待讲解不建议；<br />
+        4. 选定后我会按该音色把 7 个点位的全部讲解词<b>逐段生成 MP3</b>，讲解时可分段播放并高亮当前段落。
+      </div>
+    </div>
+  </div>
+
+  <audio id="player"></audio>
+
+  <script>
+    (function () {
+      var STORE_KEY = 'glu_tts_voice';
+      var PRESETS = {
+        exhibition: '英科医疗是一家致力于医疗器械耗材研发、生产、营销的高科技制造企业，成立于1993年，2017年7月在深圳证券交易所创业板上市，是中国最大的一次性手套制造商。安徽英科医疗用品有限公司成立于2017年11月3日，现有员工4000余人，日产丁腈手套6万箱、PVC手套5.8万箱。',
+        nbr: '以丁腈四厂为例：生产车间共拥有12条生产线，每条生产线长度约190米、高度约15米，链条长度1740米，带动约34000只手模，车间日产能可达12000箱。手模依次经过清洗、蘸胶、沥滤卷唇、硫化、氯化、脱模等工艺流程，完成手套从无到有的过程。',
+        pvc: '以PVC四厂为例：车间共16条单模生产线，每条生产线链条长度约650米，满载约6800只手模，车间日产能约9400箱。生产线优势在于实现了烤箱温度以及PU液位的自动控制，更好地把控手套品质。',
+        short: '欢迎来到安徽英科医疗，我是您的讲解员，请随我一起参观。'
+      };
+
+      var $ = function (id) { return document.getElementById(id); };
+      var synth = window.speechSynthesis;
+      var voices = [];
+      var aiVoices = [];
+      var longMap = {};         // short -> {file, title} 长段试听（完整展厅讲解）
+      var playingKey = null;      // 'ai:<short>' 或 'br:<voiceURI>'
+      var player = $('player');
+
+      var sampleEl = $('sample');
+      var rateEl = $('rate');
+      var pitchEl = $('pitch');
+
+      function readPref() {
+        try {
+          var raw = localStorage.getItem(STORE_KEY);
+          if (!raw) return null;
+          var p = JSON.parse(raw);
+          return p && (p.voiceURI || p.name) ? p : null;
+        } catch (e) { return null; }
+      }
+      function savePref(p) { try { localStorage.setItem(STORE_KEY, JSON.stringify(p)); } catch (e) {} }
+      function clearPref() { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
+
+      /* ================= 播放控制 ================= */
+      function stopAll() {
+        try { if (synth) synth.cancel(); } catch (e) {}
+        try { player.pause(); } catch (e) {}
+        playingKey = null;
+      }
+      function playAi(v) {
+        stopAll();
+        playingKey = 'ai:' + v.short;
+        player.src = v.file;
+        player.playbackRate = Number(rateEl.value);
+        player.currentTime = 0;
+        player.onended = function () { playingKey = null; renderAll(); };
+        var p = player.play();
+        if (p && p.catch) p.catch(function () { playingKey = null; renderAll(); });
+        renderAll();
+      }
+      function playBrowser(uri) {
+        var v = findVoice(uri);
+        if (!v) return;
+        stopAll();
+        playingKey = 'br:' + uri;
+        var u = new SpeechSynthesisUtterance(sampleEl.value.trim());
+        u.voice = v;
+        u.lang = v.lang || 'zh-CN';
+        u.rate = Number(rateEl.value);
+        u.pitch = Number(pitchEl.value);
+        u.onend = function () { playingKey = null; renderAll(); };
+        u.onerror = function () { playingKey = null; renderAll(); };
+        synth.speak(u);
+        renderAll();
+      }
+
+      /* ================= AI 真人音色（MP3 样例） ================= */
+      function shortLabel(name) {
+        return String(name || '')
+          .replace(/^Microsoft\s+/i, '')
+          .replace(/\s*Online.*$/i, '')
+          .trim();
+      }
+      function loadAi() {
+        fetch('assets/audio/samples/voices.json?t=' + Date.now())
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            aiVoices = data.voices || [];
+            renderAi();
+          })
+          .catch(function () {
+            $('aiBox').innerHTML = '<div class="empty">没有读到样例音频（assets/audio/samples/voices.json）。请用本地服务打开本页：http://localhost:8000/voice-lab.html</div>';
+          });
+      }
+      function loadLong() {
+        fetch('assets/audio/samples/long/long.json?t=' + Date.now())
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            (d.items || []).forEach(function (it) { longMap[it.short] = it; });
+            renderAi();
+          })
+          .catch(function () { /* 未生成长段样例时忽略 */ });
+      }
+      function renderAi() {
+        if (!aiVoices.length) {
+          $('aiBox').innerHTML = '<div class="empty">暂无样例，需先运行 .workbuddy/gen_voice_samples.py 生成。</div>';
+          return;
+        }
+        var pref = readPref();
+        var box = $('aiBox');
+        box.innerHTML = '<div class="voice-list">' + aiVoices.map(function (v) {
+          var key = 'ai:' + v.short;
+          var longKey = 'long:' + v.short;
+          var hasLong = !!longMap[v.short];
+          var busyShort = playingKey === key;
+          var busyLong = playingKey === longKey;
+          var picked = pref && pref.voiceURI === 'edge:' + v.short;
+          return '' +
+            '<div class="voice' + (picked ? ' picked' : '') + ((busyShort || busyLong) ? ' playing' : '') + '">' +
+              '<div class="voice-main">' +
+                '<div class="voice-name">' + shortLabel(v.name) +
+                  '<span class="tag gender">' + v.gender + '</span>' +
+                  '<span class="tag ai">' + v.tag + '</span>' +
+                '</div>' +
+                '<div class="voice-meta">' + v.desc + ' · <code style="font-size:11px">' + v.short + '</code></div>' +
+              '</div>' +
+              '<div class="voice-btns">' +
+                '<button class="btn btn-play' + (busyShort ? ' stop' : '') + '" data-ai="' + v.short + '">' +
+                  (busyShort ? '停止' : '试听') + '</button>' +
+                (hasLong
+                  ? '<button class="btn btn-long' + (busyLong ? ' stop' : '') + '" data-long="' + v.short + '">' +
+                      (busyLong ? '停止' : '长段') + '</button>'
+                  : '') +
+                '<button class="btn btn-pick' + (picked ? ' on' : '') + '" data-pick-ai="' + v.short + '" data-pick-name="' + v.name + '">' +
+                  (picked ? '已选中' : '选为讲解音色') + '</button>' +
+              '</div>' +
+            '</div>';
+        }).join('') + '</div>';
+
+        box.querySelectorAll('[data-ai]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var s = btn.getAttribute('data-ai');
+            if (playingKey === 'ai:' + s) { stopAll(); renderAll(); return; }
+            var v = aiVoices.filter(function (x) { return x.short === s; })[0];
+            if (v) playAi(v);
+          });
+        });
+        box.querySelectorAll('[data-long]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var s = btn.getAttribute('data-long');
+            if (playingKey === 'long:' + s) { stopAll(); renderAll(); return; }
+            var item = longMap[s];
+            if (!item) return;
+            stopAll();
+            playingKey = 'long:' + s;
+            player.src = item.file;
+            player.playbackRate = Number(rateEl.value);
+            player.currentTime = 0;
+            player.onended = function () { playingKey = null; renderAll(); };
+            var p = player.play();
+            if (p && p.catch) p.catch(function () { playingKey = null; renderAll(); });
+            renderAll();
+          });
+        });
+        box.querySelectorAll('[data-pick-ai]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            savePref({
+              mode: 'mp3',
+              voiceURI: 'edge:' + btn.getAttribute('data-pick-ai'),
+              name: btn.getAttribute('data-pick-name'),
+              rate: Number(rateEl.value),
+              pitch: Number(pitchEl.value)
+            });
+            renderAll();
+          });
+        });
+      }
+
+      /* ================= 浏览器自带音色 ================= */
+      function loadVoices() {
+        var list = (synth && synth.getVoices) ? (synth.getVoices() || []) : [];
+        if (list.length) {
+          voices = list.slice();
+          renderBrowser();
+          return true;
+        }
+        return false;
+      }
+      function findVoice(uri) {
+        return voices.filter(function (v) { return v.voiceURI === uri; })[0] || null;
+      }
+      function isNatural(v) { return /natural|neural|online/i.test(v.name + ' ' + v.voiceURI); }
+      function isZh(v) { return /^zh|^cmn|^yue/i.test(v.lang || ''); }
+      function sortVoices(list) {
+        return list.slice().sort(function (a, b) {
+          var s = (isNatural(b) ? 1 : 0) - (isNatural(a) ? 1 : 0);
+          if (s) return s;
+          var l = (b.localService ? 1 : 0) - (a.localService ? 1 : 0);
+          if (l) return l;
+          return (a.name || '').localeCompare(b.name || '');
+        });
+      }
+      function renderBrowser() {
+        var box = $('voiceBox');
+        if (!('speechSynthesis' in window)) {
+          box.innerHTML = '<div class="empty">当前浏览器不支持 Web Speech，请改用 Edge / Chrome。</div>';
+          return;
+        }
+        var zh = sortVoices(voices.filter(isZh));
+        var other = sortVoices(voices.filter(function (v) { return !isZh(v); }));
+        var pref = readPref();
+        var html = '';
+        function group(title, list) {
+          if (!list.length) return '';
+          return '<div class="group-title">' + title + '（' + list.length + '）</div><div class="voice-list">' +
+            list.map(function (v) { return rowHtml(v, pref); }).join('') + '</div>';
+        }
+        html += group('中文 · 仿真人', zh.filter(isNatural));
+        html += group('中文 · 其他音色', zh.filter(function (v) { return !isNatural(v); }));
+        html += group('非中文音色', other);
+        if (!voices.length) {
+          html = '<div class="empty">没有读到任何音色。建议用 <b>Edge</b> 打开本页。</div>';
+        }
+        box.innerHTML = html;
+        box.querySelectorAll('[data-br]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var uri = btn.getAttribute('data-br');
+            if (playingKey === 'br:' + uri) { stopAll(); renderAll(); return; }
+            playBrowser(uri);
+          });
+        });
+        box.querySelectorAll('[data-pick-br]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var uri = btn.getAttribute('data-pick-br');
+            var v = findVoice(uri);
+            if (!v) return;
+            savePref({
+              mode: 'tts',
+              voiceURI: v.voiceURI,
+              name: v.name,
+              lang: v.lang,
+              rate: Number(rateEl.value),
+              pitch: Number(pitchEl.value)
+            });
+            renderAll();
+          });
+        });
+      }
+      function rowHtml(v, pref) {
+        var picked = pref && pref.mode !== 'mp3' && pref.voiceURI === v.voiceURI;
+        var key = 'br:' + v.voiceURI;
+        var tags = '';
+        if (isNatural(v)) tags += '<span class="tag natural">仿真人</span>';
+        if (v.localService) tags += '<span class="tag local">本地</span>';
+        else tags += '<span class="tag online">需联网</span>';
+        return '' +
+          '<div class="voice' + (picked ? ' picked' : '') + (playingKey === key ? ' playing' : '') + '">' +
+            '<div class="voice-main">' +
+              '<div class="voice-name">' + v.name + tags + '</div>' +
+              '<div class="voice-meta">' + v.lang + ' · ' + (v.localService ? '离线可用' : '在线合成') + '</div>' +
+            '</div>' +
+            '<button class="btn btn-play' + (playingKey === key ? ' stop' : '') + '" data-br="' + v.voiceURI + '">' +
+              (playingKey === key ? '停止' : '试听') + '</button>' +
+            '<button class="btn btn-pick' + (picked ? ' on' : '') + '" data-pick-br="' + v.voiceURI + '">' +
+              (picked ? '已选中' : '选为讲解音色') + '</button>' +
+          '</div>';
+      }
+
+      /* ================= 当前选择 ================= */
+      function renderCurrent() {
+        var pref = readPref();
+        var box = $('currentBox');
+        if (!pref) {
+          box.innerHTML = '<span>未选择，当前使用浏览器默认音色（机械音）。</span>';
+          return;
+        }
+        var isMp3 = pref.mode === 'mp3';
+        box.innerHTML =
+          '<span>' + (isMp3 ? 'MP3 真人音色' : '浏览器音色') + '：<code>' + pref.name + '</code></span>' +
+          '<span>语速 <b>' + Number(pref.rate || 0.92).toFixed(2) + '</b> · 音调 <b>' + Number(pref.pitch || 1).toFixed(2) + '</b></span>' +
+          (isMp3 ? '<span style="color:#b4702e">需我按该音色批量生成讲解音频后才会真正生效</span>' : '') +
+          '<button class="link-btn" id="copyBtn">复制音色名</button>' +
+          '<button class="link-btn" id="clearBtn">恢复默认</button>';
+        $('copyBtn').addEventListener('click', function () {
+          var text = pref.name;
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text);
+          else {
+            var ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta);
+          }
+          $('copyBtn').textContent = '已复制 ✓';
+          setTimeout(function () { $('copyBtn').textContent = '复制音色名'; }, 1500);
+        });
+        $('clearBtn').addEventListener('click', function () { clearPref(); renderAll(); });
+      }
+
+      function renderAll() { renderAi(); renderBrowser(); renderCurrent(); }
+
+      /* ================= 初始化 ================= */
+      sampleEl.value = PRESETS.exhibition;
+      document.querySelectorAll('.preset').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          sampleEl.value = PRESETS[btn.getAttribute('data-preset')] || '';
+          stopAll(); renderAll();
+        });
+      });
+      rateEl.addEventListener('input', function () {
+        $('rateVal').textContent = Number(rateEl.value).toFixed(2);
+        player.playbackRate = Number(rateEl.value);
+      });
+      pitchEl.addEventListener('input', function () { $('pitchVal').textContent = Number(pitchEl.value).toFixed(2); });
+      var pref0 = readPref();
+      if (pref0 && pref0.rate) { rateEl.value = pref0.rate; $('rateVal').textContent = Number(pref0.rate).toFixed(2); }
+      if (pref0 && pref0.pitch) { pitchEl.value = pref0.pitch; $('pitchVal').textContent = Number(pref0.pitch).toFixed(2); }
+
+      loadAi();
+      loadLong();
+      if ('speechSynthesis' in window) {
+        loadVoices();
+        if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+        var tries = 0;
+        var timer = setInterval(function () {
+          if (loadVoices() || ++tries > 20) clearInterval(timer);
+        }, 250);
+      } else {
+        $('voiceBox').innerHTML = '<div class="empty">当前浏览器不支持 Web Speech 语音合成。</div>';
+      }
+      renderCurrent();
+      window.addEventListener('beforeunload', stopAll);
+    })();
+  </script>
+</body>
+</html>

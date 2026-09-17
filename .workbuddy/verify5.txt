@@ -1,0 +1,12 @@
+﻿exhibition.webp -> 200
+office.png -> 200
+showroom.webp -> 200
+smoke-illus.png -> 200
+warehouse-illus.png -> 200
+served data.js still has apartment-illus: False
+served data.js still has office-illus: False
+served data.js still has restaurant-illus: False
+served data.js has exhibition\.webp: True
+served data.js has office\.png: True
+served data.js has showroom\.webp: True
+served data.js has smoke-illus: True
